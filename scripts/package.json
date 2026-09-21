@@ -1,0 +1,9 @@
+{
+  "name": "roblox-language-changer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cambia el idioma de la cuenta de Roblox usando Playwright",
+  "dependencies": {
+    "playwright": "^1.47.0"
+  }
+}
