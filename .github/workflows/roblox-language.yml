@@ -11,6 +11,19 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v5
 
+      - name: Verificar archivos
+        run: |
+          echo "Directorio actual:"
+          pwd
+
+          echo ""
+          echo "Contenido:"
+          ls -la
+
+          echo ""
+          echo "Buscando package-lock.json:"
+          find . -name "package-lock.json" -print
+
       - name: Configurar Node.js
         uses: actions/setup-node@v5
         with:
