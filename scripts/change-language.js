@@ -79,15 +79,25 @@ async function main() {
       console.log(`✅ Idioma cambiado a "${TARGET_LANGUAGE_LABEL}" (dropdown personalizado).`);
     }
 
-    // Algunos formularios de Roblox guardan automáticamente al seleccionar,
-    // otros requieren confirmar con un botón "Guardar" / "Save".
-    const saveButton = page.getByRole('button', { name: /guardar|save/i }).first();
-    if (await saveButton.count() > 0) {
-      await saveButton.click();
-      console.log('✅ Cambios guardados.');
-    }
-
+    // El campo "Idioma" en la cuenta de Roblox se guarda automáticamente
+    // al seleccionar una opción (no hay que apretar ningún botón). El
+    // botón "Guardar" que existe en esta página pertenece a la sección de
+    // redes sociales, no a la de idioma, así que NO lo tocamos.
+    // Solo esperamos un momento a que la petición de guardado se complete.
     await page.waitForTimeout(2000);
+
+    // Verificación opcional: confirmamos que el valor mostrado cambió.
+    const languageValueVisible = await page
+      .getByText(TARGET_LANGUAGE_LABEL, { exact: true })
+      .first()
+      .isVisible()
+      .catch(() => false);
+
+    if (languageValueVisible) {
+      console.log('✅ Verificado: el idioma muestra "Español (España)".');
+    } else {
+      console.log('⚠️  No se pudo verificar visualmente el cambio, pero no hubo errores.');
+    }
   } catch (err) {
     console.error('❌ Error durante la automatización:', err.message);
     // Guardamos captura y HTML para depurar selectores desde los "Artifacts" del run
