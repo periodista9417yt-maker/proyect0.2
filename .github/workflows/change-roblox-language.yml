@@ -6,24 +6,20 @@ on:
 jobs:
   change-language:
     runs-on: ubuntu-latest
+    # Imagen oficial de Playwright: ya trae Node.js y Chromium instalados,
+    # así nos ahorramos el paso de "npx playwright install --with-deps",
+    # que era el que más tiempo y recursos consumía.
+    container:
+      image: mcr.microsoft.com/playwright:v1.47.0-jammy
+
     steps:
       - name: Clonar repo
         uses: actions/checkout@v4
-
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
       - name: Instalar dependencias
         run: |
           cd scripts
           npm install
-
-      - name: Instalar navegadores de Playwright
-        run: |
-          cd scripts
-          npx playwright install --with-deps chromium
 
       - name: Ejecutar script de cambio de idioma
         env:
