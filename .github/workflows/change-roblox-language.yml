@@ -1,37 +1,36 @@
-name: Cambiar idioma de Roblox
+name: Flujo Completo Roblox (Idioma y Cámara)
 
 on:
-  workflow_dispatch:   # permite ejecutarlo manualmente desde la pestaña "Actions"
+  workflow_dispatch: # Permite ejecutarlo manualmente desde la interfaz web de GitHub Actions
 
 jobs:
-  change-language:
+  automation-run:
     runs-on: ubuntu-latest
-    # Imagen oficial de Playwright: ya trae Node.js y Chromium instalados,
-    # así nos ahorramos el paso de "npx playwright install --with-deps",
-    # que era el que más tiempo y recursos consumía.
+    
+    # Imagen oficial de Playwright con navegadores listos para ahorrar tiempo de instalación
     container:
-      image: mcr.microsoft.com/playwright:v1.47.0-jammy
+      image: ://microsoft.com
 
     steps:
-      - name: Clonar repo
+      - name: Clonar repositorio
         uses: actions/checkout@v4
 
-      - name: Instalar dependencias
-        run: |
-          cd scripts
-          npm install
+      - name: Instalar dependencias del proyecto
+        run: npm install
 
-      - name: Ejecutar script de cambio de idioma
+      - name: Ejecutar Test Unificado
         env:
+          # Inyección segura de las variables secretas guardadas en tu repositorio
           ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
-        run: |
-          cd scripts
-          node change-language.js
+          SITE_URL: ${{ secrets.SITE_URL }}
+        run: npx playwright test tests/roblox-flow.spec.js
 
-      - name: Subir captura de error (si falló)
+      - name: Subir evidencias en caso de error
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: error-screenshot
-          path: scripts/error-screenshot.png
+          name: reporte-errores
+          path: |
+            test-results/
+            error-screenshot.png
           if-no-files-found: ignore
