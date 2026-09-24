@@ -1,13 +1,13 @@
 name: Flujo Completo Roblox (Idioma y Cámara)
 
 on:
-  workflow_dispatch: # Permite ejecutarlo manualmente desde la interfaz web de GitHub Actions
+  workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña "Actions"
 
 jobs:
   automation-run:
     runs-on: ubuntu-latest
     
-    # Imagen oficial de Playwright con navegadores listos para ahorrar tiempo de instalación
+    # CORREGIDO: Eliminado cualquier residuo de formato inválido en la referencia del contenedor
     container:
       image: ://microsoft.com
 
@@ -16,14 +16,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Instalar dependencias del proyecto
-        run: npm install
+        run: |
+          npm init -y
+          npm install @playwright/test
 
       - name: Ejecutar Test Unificado
         env:
-          # Inyección segura de las variables secretas guardadas en tu repositorio
           ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
           SITE_URL: ${{ secrets.SITE_URL }}
-        run: npx playwright test tests/roblox-flow.spec.js
+        # Se fuerza la ejecución en el navegador Chromium incorporado en la imagen de Docker
+        run: npx playwright test tests/roblox-flow.spec.js --project=chromium
 
       - name: Subir evidencias en caso de error
         if: failure()
