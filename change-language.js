@@ -9,7 +9,7 @@ const ACCOUNT_URL =
   'https://www.roblox.com/es/my/account#!/info';
 
 const GAME_URL =
-  'https://www.roblox.com/es/games/123720558354386/Build-the-Pyramid';
+  'https://www.roblox.com/es/my/account#!/info';
 
 const VIDEOS = {
   video1: path.resolve('videos/video1.mp4'),
@@ -757,7 +757,7 @@ async function runGameFlow(page) {
 
   await clickButton(
     page,
-    'CODES'
+    'Continuar con la cámara'
   );
 
   /*
@@ -822,11 +822,11 @@ async function runGameFlow(page) {
   await waitForTextOrButton(
     page,
     [
-      'codigo',
+      'izquierda',
       'Código'
     ],
     [
-      'De acuerdo'
+      'Tomar foto'
     ],
     60000
   );
@@ -858,11 +858,11 @@ async function runGameFlow(page) {
   await waitForTextOrButton(
     page,
     [
-      'clip gameplay',
+      'derecha',
       'Clip gameplay'
     ],
     [
-      'De acuerdo'
+      'Tomar foto'
     ],
     60000
   );
