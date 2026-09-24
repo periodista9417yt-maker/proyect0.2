@@ -1,38 +1,97 @@
-name: Flujo Completo Roblox (Idioma y Cámara)
+name: Roblox Playwright Automation
 
 on:
-  workflow_dispatch: # Permite ejecutarlo manualmente desde la pestaña "Actions"
+  workflow_dispatch:
 
 jobs:
-  automation-run:
+  roblox:
     runs-on: ubuntu-latest
-    
-    # CORREGIDO: Eliminado cualquier residuo de formato inválido en la referencia del contenedor
-    container:
-      image: ://microsoft.com
+
+    timeout-minutes: 30
 
     steps:
-      - name: Clonar repositorio
+
+      # -------------------------------------------------------
+      # Descargar repositorio
+      # -------------------------------------------------------
+
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Instalar dependencias del proyecto
-        run: |
-          npm init -y
-          npm install @playwright/test
 
-      - name: Ejecutar Test Unificado
+      # -------------------------------------------------------
+      # Node.js
+      # -------------------------------------------------------
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+
+      # -------------------------------------------------------
+      # Dependencias
+      # -------------------------------------------------------
+
+      - name: Install npm dependencies
+        run: npm ci
+
+
+      # -------------------------------------------------------
+      # Chromium
+      # -------------------------------------------------------
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+
+      # -------------------------------------------------------
+      # Comprobar vídeos
+      # -------------------------------------------------------
+
+      - name: Check videos
+        run: |
+          echo "Comprobando vídeos..."
+
+          test -f videos/video1.mp4
+          test -f videos/video2.mp4
+          test -f videos/video3.mp4
+
+          echo "Video 1:"
+          ls -lh videos/video1.mp4
+
+          echo "Video 2:"
+          ls -lh videos/video2.mp4
+
+          echo "Video 3:"
+          ls -lh videos/video3.mp4
+
+
+      # -------------------------------------------------------
+      # Ejecutar Playwright
+      # -------------------------------------------------------
+
+      - name: Run Roblox automation
         env:
           ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
-          SITE_URL: ${{ secrets.SITE_URL }}
-        # Se fuerza la ejecución en el navegador Chromium incorporado en la imagen de Docker
-        run: npx playwright test tests/roblox-flow.spec.js --project=chromium
+        run: |
+          node change-language.js
 
-      - name: Subir evidencias en caso de error
+
+      # -------------------------------------------------------
+      # Captura si falla
+      # -------------------------------------------------------
+
+      - name: Upload debug files
         if: failure()
         uses: actions/upload-artifact@v4
+
         with:
-          name: reporte-errores
+          name: roblox-debug
+
           path: |
-            test-results/
             error-screenshot.png
+            error-page.html
+
           if-no-files-found: ignore
