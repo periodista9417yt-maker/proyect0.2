@@ -1,4 +1,3 @@
-```javascript
 const { chromium } = require('playwright');
 const fs = require('fs');
 const http = require('http');
@@ -1202,4 +1201,3 @@ main().catch(error => {
 
   process.exit(1);
 });
-```
