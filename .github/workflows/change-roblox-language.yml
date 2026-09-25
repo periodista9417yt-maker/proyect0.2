@@ -36,9 +36,7 @@ jobs:
 
       - name: Install npm dependencies
         run: npm ci
-      - name: Instalar dependencias node
-        run: |
-          npm install
+
 
       # -------------------------------------------------------
       # Chromium
