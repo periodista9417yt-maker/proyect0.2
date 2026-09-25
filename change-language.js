@@ -400,32 +400,216 @@ async function wait(ms) {
 }
 
 
-async function clickButton(
-  page,
-  text,
-  timeout = TIMEOUT
-) {
 
-  console.log(`➡️ Buscando botón "${text}"...`);
+async function clickButton(page, text, timeout = 30000) {
+  console.log(`➡️ Buscando "${text}"...`);
 
-  const button = page
-    .getByRole('button', {
-      name: text,
-      exact: true
-    })
-    .first();
+  const deadline = Date.now() + timeout;
 
-  await button.waitFor({
-    state: 'visible',
-    timeout
-  });
+  while (Date.now() < deadline) {
 
-  await button.click();
+    /*
+     * ---------------------------------------------------------
+     * 1. Buscar dentro de un Dialog
+     * ---------------------------------------------------------
+     */
 
-  console.log(
-    `✅ Botón "${text}" pulsado.`
+    const dialogs = page.locator(
+      '[role="dialog"], [data-radix-dialog-content]'
+    );
+
+    const dialogCount = await dialogs.count();
+
+    for (let i = 0; i < dialogCount; i++) {
+
+      const dialog = dialogs.nth(i);
+
+      if (!(await dialog.isVisible().catch(() => false))) {
+        continue;
+      }
+
+      console.log(`🔎 Dialog encontrado. Buscando "${text}" dentro...`);
+
+      /*
+       * Primero intentamos button.
+       */
+      const dialogButton = dialog
+        .getByRole('button', {
+          name: text,
+          exact: true
+        })
+        .first();
+
+      if (
+        await dialogButton.count() > 0 &&
+        await dialogButton.isVisible().catch(() => false)
+      ) {
+
+        await dialogButton.scrollIntoViewIfNeeded().catch(() => {});
+
+        await dialogButton.click({
+          timeout: 5000
+        }).catch(async () => {
+          await dialogButton.click({
+            force: true,
+            timeout: 5000
+          });
+        });
+
+        console.log(`✅ "${text}" pulsado dentro del Dialog.`);
+        return;
+      }
+
+      /*
+       * -------------------------------------------------------
+       * 2. Buscar por texto dentro del Dialog
+       * -------------------------------------------------------
+       */
+
+      const dialogText = dialog
+        .getByText(text, {
+          exact: true
+        })
+        .first();
+
+      if (
+        await dialogText.count() > 0 &&
+        await dialogText.isVisible().catch(() => false)
+      ) {
+
+        await dialogText.scrollIntoViewIfNeeded().catch(() => {});
+
+        await dialogText.click({
+          timeout: 5000
+        }).catch(async () => {
+
+          await dialogText.click({
+            force: true,
+            timeout: 5000
+          });
+
+        });
+
+        console.log(`✅ "${text}" pulsado por texto dentro del Dialog.`);
+        return;
+      }
+
+      /*
+       * -------------------------------------------------------
+       * 3. Buscar role=button manualmente
+       * -------------------------------------------------------
+       */
+
+      const roleButton = dialog
+        .locator('[role="button"]')
+        .filter({
+          hasText: text
+        })
+        .first();
+
+      if (
+        await roleButton.count() > 0 &&
+        await roleButton.isVisible().catch(() => false)
+      ) {
+
+        await roleButton.scrollIntoViewIfNeeded().catch(() => {});
+
+        await roleButton.click({
+          force: true,
+          timeout: 5000
+        });
+
+        console.log(`✅ "${text}" pulsado mediante role="button".`);
+        return;
+      }
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * 4. Buscar globalmente como button
+     * ---------------------------------------------------------
+     */
+
+    const globalButton = page
+      .getByRole('button', {
+        name: text,
+        exact: true
+      })
+      .first();
+
+    if (
+      await globalButton.count() > 0 &&
+      await globalButton.isVisible().catch(() => false)
+    ) {
+
+      await globalButton.scrollIntoViewIfNeeded().catch(() => {});
+
+      await globalButton.click({
+        timeout: 5000
+      }).catch(async () => {
+
+        await globalButton.click({
+          force: true,
+          timeout: 5000
+        });
+
+      });
+
+      console.log(`✅ "${text}" pulsado globalmente.`);
+      return;
+    }
+
+
+    /*
+     * ---------------------------------------------------------
+     * 5. Buscar por texto global
+     * ---------------------------------------------------------
+     */
+
+    const globalText = page
+      .getByText(text, {
+        exact: true
+      })
+      .first();
+
+    if (
+      await globalText.count() > 0 &&
+      await globalText.isVisible().catch(() => false)
+    ) {
+
+      await globalText.scrollIntoViewIfNeeded().catch(() => {});
+
+      await globalText.click({
+        timeout: 5000
+      }).catch(async () => {
+
+        await globalText.click({
+          force: true,
+          timeout: 5000
+        });
+
+      });
+
+      console.log(`✅ "${text}" pulsado por texto.`);
+      return;
+    }
+
+
+    await page.waitForTimeout(500);
+  }
+
+  /*
+   * ---------------------------------------------------------
+   * No encontrado
+   * ---------------------------------------------------------
+   */
+
+  throw new Error(
+    `No se pudo encontrar "${text}" después de ${timeout} ms.`
   );
 }
+
 
 
 async function waitForText(
@@ -755,32 +939,38 @@ async function runGameFlow(page) {
    * ----------------------------------------------------------
    */
 
-  await clickButton(
-    page,
-    'Continuar con la cámara'
-  );
 
-  /*
-   * ----------------------------------------------------------
-   * CONTINUAR #1
-   * ----------------------------------------------------------
-   */
+await clickButton(
+  page,
+  'CODES',
+  30000
+);
 
-  await clickButton(
-    page,
-    'Continuar'
-  );
+console.log('✅ CODES pulsado.');
 
-  /*
-   * ----------------------------------------------------------
-   * CONTINUAR #2
-   * ----------------------------------------------------------
-   */
+await page.waitForTimeout(1000);
 
-  await clickButton(
-    page,
-    'Continuar'
-  );
+console.log('➡️ Buscando primer Continuar...');
+
+await clickButton(
+  page,
+  'Continuar',
+  30000
+);
+
+console.log('✅ Primer Continuar pulsado.');
+
+await page.waitForTimeout(1000);
+
+console.log('➡️ Buscando segundo Continuar...');
+
+await clickButton(
+  page,
+  'Continuar',
+  30000
+);
+
+console.log('✅ Segundo Continuar pulsado.');
 
   /*
    * ----------------------------------------------------------
