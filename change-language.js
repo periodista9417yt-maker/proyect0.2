@@ -402,16 +402,16 @@ async function wait(ms) {
 
 
 async function clickButton(page, text, timeout = 30000) {
-  console.log(`➡️ Buscando "${text}"...`);
+  console.log(`➡️ Buscando botón "${text}"...`);
 
   const deadline = Date.now() + timeout;
 
   while (Date.now() < deadline) {
 
     /*
-     * ---------------------------------------------------------
-     * 1. Buscar dentro de un Dialog
-     * ---------------------------------------------------------
+     * ========================================================
+     * BUSCAR DIALOG VISIBLE
+     * ========================================================
      */
 
     const dialogs = page.locator(
@@ -424,217 +424,440 @@ async function clickButton(page, text, timeout = 30000) {
 
       const dialog = dialogs.nth(i);
 
-      if (!(await dialog.isVisible().catch(() => false))) {
+      if (
+        !(await dialog.isVisible().catch(() => false))
+      ) {
         continue;
       }
 
-      console.log(`🔎 Dialog encontrado. Buscando "${text}" dentro...`);
+      console.log(
+        `🔎 Dialog encontrado. Buscando botón inferior "${text}"...`
+      );
+
 
       /*
-       * Primero intentamos button.
+       * ======================================================
+       * BUSCAR TODOS LOS BUTTON DEL DIALOG
+       * ======================================================
        */
-      const dialogButton = dialog
-        .getByRole('button', {
-          name: text,
-          exact: true
-        })
-        .first();
 
-      if (
-        await dialogButton.count() > 0 &&
-        await dialogButton.isVisible().catch(() => false)
+      const buttons = dialog.locator('button');
+
+      const buttonCount = await buttons.count();
+
+      console.log(
+        `🔎 Botones encontrados en Dialog: ${buttonCount}`
+      );
+
+
+      /*
+       * Recorremos TODOS los botones.
+       *
+       * No usamos .first(), porque puede existir otro
+       * elemento "Continuar" antes del botón azul.
+       */
+
+      const candidates = [];
+
+      for (let j = 0; j < buttonCount; j++) {
+
+        const button = buttons.nth(j);
+
+        if (
+          !(await button.isVisible().catch(() => false))
+        ) {
+          continue;
+        }
+
+        const buttonText = (
+          await button.innerText().catch(() => '')
+        ).trim();
+
+        const ariaLabel =
+          await button.getAttribute('aria-label')
+            .catch(() => null);
+
+        const disabled =
+          await button.isDisabled()
+            .catch(() => false);
+
+        const box =
+          await button.boundingBox()
+            .catch(() => null);
+
+        if (!box) {
+          continue;
+        }
+
+        /*
+         * Solo nos interesan botones cuyo texto sea
+         * exactamente "Continuar".
+         */
+
+        if (
+          buttonText === text ||
+          ariaLabel === text
+        ) {
+
+          candidates.push({
+            button,
+            index: j,
+            text: buttonText,
+            ariaLabel,
+            disabled,
+            x: box.x,
+            y: box.y,
+            width: box.width,
+            height: box.height
+          });
+        }
+      }
+
+
+      /*
+       * ======================================================
+       * ELEGIR EL BOTÓN MÁS ABAJO
+       * ======================================================
+       *
+       * El botón azul que quieres pulsar está abajo del Dialog.
+       *
+       * Por eso elegimos el candidato que tenga la mayor
+       * coordenada Y.
+       */
+
+      if (candidates.length > 0) {
+
+        candidates.sort(
+          (a, b) => b.y - a.y
+        );
+
+        const target =
+          candidates[0];
+
+        console.log(
+          `🎯 Botón "${text}" seleccionado:`
+        );
+
+        console.log(
+          JSON.stringify({
+            index: target.index,
+            text: target.text,
+            x: target.x,
+            y: target.y,
+            width: target.width,
+            height: target.height,
+            disabled: target.disabled
+          })
+        );
+
+
+        /*
+         * Si el botón está deshabilitado, esperamos.
+         */
+
+        if (target.disabled) {
+
+          console.log(
+            '⏳ El botón está deshabilitado. Esperando...'
+          );
+
+          await page.waitForTimeout(500);
+
+          continue;
+        }
+
+
+        /*
+         * ====================================================
+         * SCROLL
+         * ====================================================
+         */
+
+        await target.button
+          .scrollIntoViewIfNeeded()
+          .catch(() => {});
+
+
+        /*
+         * ====================================================
+         * CLICK NORMAL
+         * ====================================================
+         */
+
+        try {
+
+          await target.button.click({
+            timeout: 5000
+          });
+
+          console.log(
+            `✅ Botón azul inferior "${text}" pulsado.`
+          );
+
+          return;
+
+        } catch (normalError) {
+
+          console.log(
+            '⚠️ Click normal falló. Intentando force...'
+          );
+
+
+          /*
+           * ==================================================
+           * FORCE CLICK
+           * ==================================================
+           */
+
+          try {
+
+            await target.button.click({
+              force: true,
+              timeout: 5000
+            });
+
+            console.log(
+              `✅ Botón "${text}" pulsado con force:true.`
+            );
+
+            return;
+
+          } catch (forceError) {
+
+            console.log(
+              '⚠️ force:true también falló.'
+            );
+          }
+
+
+          /*
+           * ==================================================
+           * CLICK POR COORDENADAS
+           * ==================================================
+           *
+           * Como último recurso hacemos click en el centro
+           * del botón real encontrado.
+           */
+
+          try {
+
+            const box =
+              await target.button.boundingBox();
+
+            if (box) {
+
+              const centerX =
+                box.x + box.width / 2;
+
+              const centerY =
+                box.y + box.height / 2;
+
+              console.log(
+                `🖱️ Click por coordenadas: ${centerX}, ${centerY}`
+              );
+
+              await page.mouse.click(
+                centerX,
+                centerY
+              );
+
+              console.log(
+                `✅ Botón "${text}" pulsado por coordenadas.`
+              );
+
+              return;
+            }
+
+          } catch (coordinateError) {
+
+            console.log(
+              '⚠️ Click por coordenadas falló:',
+              coordinateError.message
+            );
+          }
+        }
+      }
+
+
+      /*
+       * ======================================================
+       * SI NO ENCONTRAMOS BUTTON, DIAGNÓSTICO
+       * ======================================================
+       */
+
+      const allElements =
+        dialog.locator(
+          'button, [role="button"]'
+        );
+
+      const totalElements =
+        await allElements.count();
+
+      for (
+        let j = 0;
+        j < totalElements;
+        j++
       ) {
 
-        await dialogButton.scrollIntoViewIfNeeded().catch(() => {});
+        const element =
+          allElements.nth(j);
 
-        await dialogButton.click({
-          timeout: 5000
-        }).catch(async () => {
-          await dialogButton.click({
+        if (
+          !(await element.isVisible()
+            .catch(() => false))
+        ) {
+          continue;
+        }
+
+        const txt =
+          (
+            await element.innerText()
+              .catch(() => '')
+          ).trim();
+
+        if (txt.includes(text)) {
+
+          const box =
+            await element.boundingBox()
+              .catch(() => null);
+
+          console.log(
+            '🔍 Candidato encontrado:',
+            {
+              index: j,
+              text: txt,
+              box
+            }
+          );
+        }
+      }
+    }
+
+
+    /*
+     * ========================================================
+     * BUSCAR FUERA DEL DIALOG
+     * ========================================================
+     */
+
+    const globalButtons =
+      page.locator(
+        'button, [role="button"]'
+      );
+
+    const globalCount =
+      await globalButtons.count();
+
+    const globalCandidates = [];
+
+    for (
+      let i = 0;
+      i < globalCount;
+      i++
+    ) {
+
+      const button =
+        globalButtons.nth(i);
+
+      if (
+        !(await button.isVisible()
+          .catch(() => false))
+      ) {
+        continue;
+      }
+
+      const txt =
+        (
+          await button.innerText()
+            .catch(() => '')
+        ).trim();
+
+      if (txt !== text) {
+        continue;
+      }
+
+      const disabled =
+        await button.isDisabled()
+          .catch(() => false);
+
+      const box =
+        await button.boundingBox()
+          .catch(() => null);
+
+      if (!box) {
+        continue;
+      }
+
+      globalCandidates.push({
+        button,
+        y: box.y,
+        box,
+        disabled
+      });
+    }
+
+
+    /*
+     * Elegimos igualmente el botón más abajo.
+     */
+
+    if (globalCandidates.length > 0) {
+
+      globalCandidates.sort(
+        (a, b) => b.y - a.y
+      );
+
+      const target =
+        globalCandidates[0];
+
+      if (!target.disabled) {
+
+        await target.button
+          .scrollIntoViewIfNeeded()
+          .catch(() => {});
+
+        try {
+
+          await target.button.click({
+            timeout: 5000
+          });
+
+        } catch (_) {
+
+          await target.button.click({
             force: true,
             timeout: 5000
           });
-        });
+        }
 
-        console.log(`✅ "${text}" pulsado dentro del Dialog.`);
-        return;
-      }
+        console.log(
+          `✅ "${text}" pulsado.`
+        );
 
-      /*
-       * -------------------------------------------------------
-       * 2. Buscar por texto dentro del Dialog
-       * -------------------------------------------------------
-       */
-
-      const dialogText = dialog
-        .getByText(text, {
-          exact: true
-        })
-        .first();
-
-      if (
-        await dialogText.count() > 0 &&
-        await dialogText.isVisible().catch(() => false)
-      ) {
-
-        await dialogText.scrollIntoViewIfNeeded().catch(() => {});
-
-        await dialogText.click({
-          timeout: 5000
-        }).catch(async () => {
-
-          await dialogText.click({
-            force: true,
-            timeout: 5000
-          });
-
-        });
-
-        console.log(`✅ "${text}" pulsado por texto dentro del Dialog.`);
-        return;
-      }
-
-      /*
-       * -------------------------------------------------------
-       * 3. Buscar role=button manualmente
-       * -------------------------------------------------------
-       */
-
-      const roleButton = dialog
-        .locator('[role="button"]')
-        .filter({
-          hasText: text
-        })
-        .first();
-
-      if (
-        await roleButton.count() > 0 &&
-        await roleButton.isVisible().catch(() => false)
-      ) {
-
-        await roleButton.scrollIntoViewIfNeeded().catch(() => {});
-
-        await roleButton.click({
-          force: true,
-          timeout: 5000
-        });
-
-        console.log(`✅ "${text}" pulsado mediante role="button".`);
         return;
       }
     }
 
 
     /*
-     * ---------------------------------------------------------
-     * 4. Buscar globalmente como button
-     * ---------------------------------------------------------
+     * Esperar antes de volver a buscar.
      */
-
-    const globalButton = page
-      .getByRole('button', {
-        name: text,
-        exact: true
-      })
-      .first();
-
-    if (
-      await globalButton.count() > 0 &&
-      await globalButton.isVisible().catch(() => false)
-    ) {
-
-      await globalButton.scrollIntoViewIfNeeded().catch(() => {});
-
-      await globalButton.click({
-        timeout: 5000
-      }).catch(async () => {
-
-        await globalButton.click({
-          force: true,
-          timeout: 5000
-        });
-
-      });
-
-      console.log(`✅ "${text}" pulsado globalmente.`);
-      return;
-    }
-
-
-    /*
-     * ---------------------------------------------------------
-     * 5. Buscar por texto global
-     * ---------------------------------------------------------
-     */
-
-    const globalText = page
-      .getByText(text, {
-        exact: true
-      })
-      .first();
-
-    if (
-      await globalText.count() > 0 &&
-      await globalText.isVisible().catch(() => false)
-    ) {
-
-      await globalText.scrollIntoViewIfNeeded().catch(() => {});
-
-      await globalText.click({
-        timeout: 5000
-      }).catch(async () => {
-
-        await globalText.click({
-          force: true,
-          timeout: 5000
-        });
-
-      });
-
-      console.log(`✅ "${text}" pulsado por texto.`);
-      return;
-    }
-
 
     await page.waitForTimeout(500);
   }
 
+
   /*
-   * ---------------------------------------------------------
-   * No encontrado
-   * ---------------------------------------------------------
+   * ========================================================
+   * ERROR
+   * ========================================================
    */
 
-console.log('🔍 DIAGNÓSTICO: elementos que contienen el texto buscado');
-
-const debugElements = await page.locator(
-  `text="${text}"`
-).evaluateAll(elements =>
-  elements.map((el, index) => ({
-    index,
-    tag: el.tagName,
-    role: el.getAttribute('role'),
-    type: el.getAttribute('type'),
-    class: el.className,
-    ariaLabel: el.getAttribute('aria-label'),
-    text: el.textContent?.trim(),
-    visible:
-      !!(
-        el.offsetWidth ||
-        el.offsetHeight ||
-        el.getClientRects().length
-      )
-  }))
-).catch(() => []);
-
-console.log(
-  JSON.stringify(debugElements, null, 2)
-);
-
   throw new Error(
-    `No se pudo encontrar "${text}" después de ${timeout} ms.`
+    `No se pudo encontrar el botón inferior "${text}" después de ${timeout} ms.`
   );
 }
+
 
 
 
