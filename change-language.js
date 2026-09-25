@@ -605,6 +605,32 @@ async function clickButton(page, text, timeout = 30000) {
    * ---------------------------------------------------------
    */
 
+console.log('🔍 DIAGNÓSTICO: elementos que contienen el texto buscado');
+
+const debugElements = await page.locator(
+  `text="${text}"`
+).evaluateAll(elements =>
+  elements.map((el, index) => ({
+    index,
+    tag: el.tagName,
+    role: el.getAttribute('role'),
+    type: el.getAttribute('type'),
+    class: el.className,
+    ariaLabel: el.getAttribute('aria-label'),
+    text: el.textContent?.trim(),
+    visible:
+      !!(
+        el.offsetWidth ||
+        el.offsetHeight ||
+        el.getClientRects().length
+      )
+  }))
+).catch(() => []);
+
+console.log(
+  JSON.stringify(debugElements, null, 2)
+);
+
   throw new Error(
     `No se pudo encontrar "${text}" después de ${timeout} ms.`
   );
