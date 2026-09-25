@@ -942,7 +942,7 @@ async function runGameFlow(page) {
 
 await clickButton(
   page,
-  'CODES',
+  'Continuar con la cámara',
   30000
 );
 
