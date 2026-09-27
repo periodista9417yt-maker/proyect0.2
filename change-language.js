@@ -400,81 +400,102 @@ async function wait(ms) {
 }
 
 
-
 async function clickButton(page, text, timeout = 30000) {
   console.log(`➡️ Buscando botón "${text}"...`);
 
   const deadline = Date.now() + timeout;
 
   while (Date.now() < deadline) {
+
     // ========================================================
-    // 1. INTENTAR BUSCAR EN LA PÁGINA PRINCIPAL / DIALOGS
+    // 1. ESTRATEGIA INMEDIATA: BÚSQUEDA GLOBAL DE CANDIDATOS
     // ========================================================
-    const dialogs = page.locator('[role="dialog"], [data-radix-dialog-content]');
-    const dialogCount = await dialogs.count();
+    // Buscamos cualquier botón visible en la página actual (con o sin Dialog)
+    const globalButtons = page.locator('button, [role="button"], [class*="button"]');
+    const globalCount = await globalButtons.count();
+    const candidates = [];
 
-    for (let i = 0; i < dialogCount; i++) {
-      const dialog = dialogs.nth(i);
-      if (!(await dialog.isVisible().catch(() => false))) continue;
+    for (let i = 0; i < globalCount; i++) {
+      const button = globalButtons.nth(i);
+      
+      if (!(await button.isVisible().catch(() => false))) {
+        continue;
+      }
 
-      const buttons = dialog.locator('button');
-      const buttonCount = await buttons.count();
+      const buttonText = (await button.innerText().catch(() => '')).trim();
+      const ariaLabel = await button.getAttribute('aria-label').catch(() => null);
+      const disabled = await button.isDisabled().catch(() => false);
+      const box = await button.boundingBox().catch(() => null);
 
-      for (let j = 0; j < buttonCount; j++) {
-        const button = buttons.nth(j);
-        if (!(await button.isVisible().catch(() => false))) continue;
+      if (!box) continue;
 
-        const buttonText = (await button.innerText().catch(() => '')).trim();
-        const ariaLabel = await button.getAttribute('aria-label').catch(() => null);
-        const disabled = await button.isDisabled().catch(() => false);
+      // Si coincide el texto o el atributo de accesibilidad
+      if (buttonText === text || ariaLabel === text || buttonText.includes(text)) {
+        candidates.push({
+          button,
+          text: buttonText,
+          disabled,
+          y: box.y,
+          box
+        });
+      }
+    }
 
-        if ((buttonText === text || ariaLabel === text) && !disabled) {
-          await button.scrollIntoViewIfNeeded().catch(() => {});
-          await button.click({ timeout: 5000 });
-          console.log(`✅ Botón "${text}" pulsado en la página principal.`);
+    // Si encontramos el botón en la página normal, lo pulsamos
+    if (candidates.length > 0) {
+      // Ordenamos para agarrar el que esté más abajo si hay duplicados
+      candidates.sort((a, b) => b.y - a.y);
+      const target = candidates[0];
+
+      if (!target.disabled) {
+        await target.button.scrollIntoViewIfNeeded().catch(() => {});
+        try {
+          await target.button.click({ timeout: 5000 });
+          console.log(`✅ Botón normal "${text}" pulsado exitosamente.`);
+          return;
+        } catch (_) {
+          await target.button.click({ force: true, timeout: 5000 });
+          console.log(`✅ Botón normal "${text}" pulsado con force:true.`);
           return;
         }
+      } else {
+        console.log(`⏳ El botón "${text}" fue encontrado pero está deshabilitado...`);
       }
     }
 
     // ========================================================
-    // 2. NUEVO: RECORRER TODOS LOS IFRAMES (Para Persona)
+    // 2. ESTRATEGIA SECUNDARIA: EN IFRAMES (Para el flujo de Persona)
     // ========================================================
     const frames = page.frames();
     for (const frame of frames) {
-      // Filtrar preferiblemente por el dominio de Persona
       if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
-        // Buscamos los botones dentro del contexto aislado de este iframe
-        const buttons = frame.locator('button, [role="button"]');
-        const buttonCount = await buttons.count();
+        const iframeButtons = frame.locator('button, [role="button"]');
+        const iframeCount = await iframeButtons.count();
 
-        for (let j = 0; j < buttonCount; j++) {
-          const button = buttons.nth(j);
+        for (let j = 0; j < iframeCount; j++) {
+          const button = iframeButtons.nth(j);
           if (!(await button.isVisible().catch(() => false))) continue;
 
           const buttonText = (await button.innerText().catch(() => '')).trim();
           const disabled = await button.isDisabled().catch(() => false);
 
-          if (buttonText === text && !disabled) {
-            console.log(`🎯 Botón "${text}" encontrado dentro del iframe de Persona.`);
+          if ((buttonText === text || buttonText.includes(text)) && !disabled) {
+            console.log(`🎯 Botón "${text}" detectado internamente en el iframe de Persona.`);
             await button.scrollIntoViewIfNeeded().catch(() => {});
-            
-            // Forzamos el click dentro del iframe
             await button.click({ force: true, timeout: 5000 });
-            console.log(`✅ Botón "${text}" de Persona pulsado exitosamente.`);
+            console.log(`✅ Botón "${text}" de Persona pulsado.`);
             return;
           }
         }
       }
     }
 
-    // Esperar antes de la siguiente iteración de búsqueda
+    // Esperar un breve instante antes de reintentar en el próximo ciclo
     await page.waitForTimeout(500);
   }
 
   throw new Error(`No se pudo encontrar el botón inferior "${text}" después de ${timeout} ms.`);
 }
-
 
 
 
