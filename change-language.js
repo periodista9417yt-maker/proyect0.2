@@ -1039,6 +1039,12 @@ async function main() {
      * --------------------------------------------------------
      */
 
+        /*
+     * --------------------------------------------------------
+     * UN SOLO BROWSER
+     * --------------------------------------------------------
+     */
+
     browser =
       await chromium.launch({
 
@@ -1054,7 +1060,20 @@ async function main() {
 
           '--autoplay-policy=no-user-gesture-required',
 
-          '--disable-dev-shm-usage'
+          '--disable-dev-shm-usage',
+
+          // ↓↓↓ NUEVOS ARGUMENTOS PARA EVITAR EL BLOQUEO DE LOOPBACK/LOCAL HOST ↓↓↓
+          
+          /*
+           * Desactiva la política de seguridad del mismo origen (CORS) y 
+           * las restricciones de acceso a redes privadas (Private Network Access)
+           */
+          '--disable-web-security',
+          
+          /*
+           * Permite explícitamente que los sitios web carguen contenido de localhost
+           */
+          '--allow-running-insecure-content'
         ]
       });
 
