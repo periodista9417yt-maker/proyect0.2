@@ -1135,36 +1135,27 @@ async function main() {
      * INTERCEPTOR DE SEGURIDAD PARA EL IFRAME DE PERSONA
      * Elimina el bloqueo X-Frame-Options: SAMEORIGIN
      */
-    await page.route('https://*://**', async route => {
+     await page.route('https://*://**', async route => {
       try {
         const response = await route.fetch();
         const headers = response.headers();
-        
-        // Eliminamos las cabeceras que evitan que Roblox pinte a Persona en su frame
         delete headers['x-frame-options'];
         delete headers['content-security-policy']; 
-
-        await route.fulfill({
-          response,
-          headers
-        });
+        await route.fulfill({ response, headers });
       } catch (err) {
-        // En caso de que falle la petición por red, continuar normalmente
         await route.continue().catch(() => {});
       }
     });
 
-    // ↑↑↑ HASTA AQUÍ ↑↑↑
-
+    // ↓↓↓ REEMPLAZA EL page.addInitScript POR ESTE BLOQUE EN EL CONTEXTO ↓↓↓
     
     /*
-     * Instalamos la cámara ANTES de navegar.
+     * Instalamos la cámara ANTES de navegar en TODO el contexto 
+     * para asegurar que afecte a todos los sub-iframes (Persona).
      */
-    await page.addInitScript({
-      content:
-        `(${CAMERA_INIT_SCRIPT.toString()})();`
+    await context.addInitScript({
+      content: `(${CAMERA_INIT_SCRIPT.toString()})();`
     });
-
     /*
      * Logs de consola.
      */
