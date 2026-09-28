@@ -408,63 +408,7 @@ async function clickButton(page, text, timeout = 30000) {
   while (Date.now() < deadline) {
 
     // ========================================================
-    // 1. ESTRATEGIA INMEDIATA: BÚSQUEDA GLOBAL DE CANDIDATOS
-    // ========================================================
-    // Buscamos cualquier botón visible en la página actual (con o sin Dialog)
-    const globalButtons = page.locator('button, [role="button"], [class*="button"]');
-    const globalCount = await globalButtons.count();
-    const candidates = [];
-
-    for (let i = 0; i < globalCount; i++) {
-      const button = globalButtons.nth(i);
-      
-      if (!(await button.isVisible().catch(() => false))) {
-        continue;
-      }
-
-      const buttonText = (await button.innerText().catch(() => '')).trim();
-      const ariaLabel = await button.getAttribute('aria-label').catch(() => null);
-      const disabled = await button.isDisabled().catch(() => false);
-      const box = await button.boundingBox().catch(() => null);
-
-      if (!box) continue;
-
-      // Si coincide el texto o el atributo de accesibilidad
-      if (buttonText === text || ariaLabel === text || buttonText.includes(text)) {
-        candidates.push({
-          button,
-          text: buttonText,
-          disabled,
-          y: box.y,
-          box
-        });
-      }
-    }
-
-    // Si encontramos el botón en la página normal, lo pulsamos
-    if (candidates.length > 0) {
-      // Ordenamos para agarrar el que esté más abajo si hay duplicados
-      candidates.sort((a, b) => b.y - a.y);
-      const target = candidates[0];
-
-      if (!target.disabled) {
-        await target.button.scrollIntoViewIfNeeded().catch(() => {});
-        try {
-          await target.button.click({ timeout: 5000 });
-          console.log(`✅ Botón normal "${text}" pulsado exitosamente.`);
-          return;
-        } catch (_) {
-          await target.button.click({ force: true, timeout: 5000 });
-          console.log(`✅ Botón normal "${text}" pulsado con force:true.`);
-          return;
-        }
-      } else {
-        console.log(`⏳ El botón "${text}" fue encontrado pero está deshabilitado...`);
-      }
-    }
-
-    // ========================================================
-    // 2. ESTRATEGIA SECUNDARIA: EN IFRAMES (Para el flujo de Persona)
+    // 1. ESTRATEGIA PRINCIPAL: EN IFRAMES (Para el flujo de Persona)
     // ========================================================
     const frames = page.frames();
     for (const frame of frames) {
@@ -477,9 +421,9 @@ async function clickButton(page, text, timeout = 30000) {
           if (!(await button.isVisible().catch(() => false))) continue;
 
           const buttonText = (await button.innerText().catch(() => '')).trim();
-          const disabled = await button.isDisabled().catch(() => false);
 
-          if ((buttonText === text || buttonText.includes(text)) && !disabled) {
+          // Validación estricta de coincidencia exacta para evitar clics erróneos
+          if (buttonText === text && !(await button.isDisabled().catch(() => false))) {
             console.log(`🎯 Botón "${text}" detectado internamente en el iframe de Persona.`);
             await button.scrollIntoViewIfNeeded().catch(() => {});
             await button.click({ force: true, timeout: 5000 });
@@ -490,7 +434,55 @@ async function clickButton(page, text, timeout = 30000) {
       }
     }
 
-    // Esperar un breve instante antes de reintentar en el próximo ciclo
+    // ========================================================
+    // 2. ESTRATEGIA SECUNDARIA: BÚSQUEDA GLOBAL EXACTA (Roblox Página Base)
+    // ========================================================
+    const globalButtons = page.locator('button, [role="button"], [class*="button"]');
+    const globalCount = await globalButtons.count();
+    const candidates = [];
+
+    for (let i = 0; i < globalCount; i++) {
+      const button = globalButtons.nth(i);
+      
+      if (!(await button.isVisible().catch(() => false))) continue;
+
+      const buttonText = (await button.innerText().catch(() => '')).trim();
+      const ariaLabel = await button.getAttribute('aria-label').catch(() => null);
+      const disabled = await button.isDisabled().catch(() => false);
+      const box = await button.boundingBox().catch(() => null);
+
+      if (!box) continue;
+
+      // EXIGIMOS COINCIDENCIA EXACTA: Esto evita confundir "Continuar" con "Continuar con identificación"
+      if (buttonText === text || ariaLabel === text) {
+        candidates.push({
+          button,
+          text: buttonText,
+          disabled,
+          y: box.y
+        });
+      }
+    }
+
+    if (candidates.length > 0) {
+      // Ordenamos para priorizar el que esté más abajo si hay superposiciones
+      candidates.sort((a, b) => b.y - a.y);
+      const target = candidates[0];
+
+      if (!target.disabled) {
+        await target.button.scrollIntoViewIfNeeded().catch(() => {});
+        try {
+          await target.button.click({ timeout: 5000 });
+          console.log(`✅ Botón exacto "${text}" pulsado exitosamente.`);
+          return;
+        } catch (_) {
+          await target.button.click({ force: true, timeout: 5000 });
+          console.log(`✅ Botón exacto "${text}" pulsado con force:true.`);
+          return;
+        }
+      }
+    }
+
     await page.waitForTimeout(500);
   }
 
