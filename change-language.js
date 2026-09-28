@@ -641,44 +641,59 @@ async function waitForTextOrButton(
  * ------------------------------------------------------------
  */
 
-async function setCameraVideo(
-  page,
-  filename
-) {
+async function setCameraVideo(page, filename) {
+  const url = `http://127.0.0.1:${PORT}/${filename}`;
+  console.log(`📷 Cambiando cámara a ${filename} en los frames de Persona...`);
 
-  const url =
-    `http://127.0.0.1:${PORT}/${filename}`;
-
-  console.log(
-    `📷 Cambiando cámara a ${filename}...`
-  );
-
-  const result =
-    await page.evaluate(async (videoUrl) => {
-
-      if (
-        typeof window.__setCameraVideo !==
-        'function'
-      ) {
-
-        throw new Error(
-          'La cámara virtual no está inicializada.'
-        );
+  // 1. Intentar cambiar en la página principal (con try/catch aislado para que NO rompa el script)
+  try {
+    await page.evaluate((videoUrl) => {
+      if (typeof window.__setCameraVideo === 'function') {
+        return window.__setCameraVideo(videoUrl);
       }
+    }, url).catch(() => {});
+  } catch (_) {
+    // Si la página principal de Roblox no está inicializada, ignoramos el fallo y continuamos
+  }
 
-      return window.__setCameraVideo(
-        videoUrl
-      );
+  // 2. Cambiar de manera simultánea recorriendo los iframes activos
+  const frames = page.frames();
+  let cambiadoEnIframe = false;
 
-    }, url);
+  for (const frame of frames) {
+    const frameUrl = frame.url();
+    
+    // Filtramos estrictamente para actuar solo sobre los marcos de Persona
+    if (frameUrl.includes('withpersona.com') || frameUrl.includes('inquiry')) {
+      try {
+        console.log(`🔎 Evaluando iframe de Persona detectado: ${frameUrl.substring(0, 50)}...`);
 
-  console.log(
-    `✅ Cámara cambiada a ${filename}.`
-  );
+        // Ejecutamos el cambio dentro del contexto aislado de este iframe
+        const result = await frame.evaluate(async (videoUrl) => {
+          if (typeof window.__setCameraVideo === 'function') {
+            return window.__setCameraVideo(videoUrl);
+          }
+          return { error: 'No inicializado en este frame' };
+        }, url).catch(() => null);
 
-  console.log(
-    `📷 Tracks activas: ${result.tracks}`
-  );
+        if (result && result.ok) {
+          console.log(`✅ Cámara cambiada exitosamente DENTRO del iframe de Persona.`);
+          console.log(`📷 Tracks activos en el iframe: ${result.tracks}`);
+          cambiadoEnIframe = true;
+        } else if (result && result.error) {
+          console.log(`⚠️ El script existía en el iframe pero arrojó: ${result.error}`);
+        }
+      } catch (err) {
+        console.log(`⚠️ No se pudo evaluar este frame temporalmente: ${err.message}`);
+      }
+    }
+  }
+
+  // 3. Manejo de contingencia general si ningún iframe procesó el video
+  if (!cambiadoEnIframe) {
+    console.log(`⏳ Alerta: Persona se está cargando pero la cámara aún no ha respondido. Dando una pequeña espera...`);
+    await page.waitForTimeout(2000);
+  }
 }
 
 
