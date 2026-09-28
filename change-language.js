@@ -275,62 +275,47 @@ const CAMERA_INIT_SCRIPT = () => {
    * Cambiar la fuente del vídeo sin destruir
    * el MediaStream.
    */
-  window.__setCameraVideo = async function(url) {
+  async function setCameraVideo(page, filename) {
+  const url = `http://127.0.0.1:${PORT}/${filename}`;
+  console.log(`📷 Cambiando cámara a ${filename} en todos los frames...`);
 
-    const stream = await createCamera();
-
-    return new Promise(async (resolve, reject) => {
-
-      try {
-
-        video.pause();
-
-        video.src = url;
-
-        video.currentTime = 0;
-
-        video.onloadeddata = async () => {
-
-          try {
-
-            await video.play();
-
-            /*
-             * Esperamos unos frames para asegurarnos
-             * de que el canvas está recibiendo imagen.
-             */
-            setTimeout(() => {
-
-              resolve({
-                ok: true,
-                tracks:
-                  stream.getVideoTracks().length,
-                url
-              });
-
-            }, 500);
-
-          } catch (error) {
-            reject(error);
-          }
-        };
-
-        video.onerror = () => {
-          reject(
-            new Error(
-              'No se pudo cargar el vídeo de cámara: ' +
-              url
-            )
-          );
-        };
-
-        video.load();
-
-      } catch (error) {
-        reject(error);
+  // 1. Cambiar en la página principal
+  try {
+    await page.evaluate(async (videoUrl) => {
+      if (typeof window.__setCameraVideo === 'function') {
+        return window.__setCameraVideo(videoUrl);
       }
-    });
-  };
+    }, url).catch(() => {});
+  } catch (_) {}
+
+  // 2. Cambiar de manera simultánea en todos los iframes activos (Persona)
+  const frames = page.frames();
+  let cambiadoEnIframe = false;
+
+  for (const frame of frames) {
+    try {
+      // Evaluamos si el script de la cámara está disponible en el iframe y ejecutamos
+      const result = await frame.evaluate(async (videoUrl) => {
+        if (typeof window.__setCameraVideo === 'function') {
+          return window.__setCameraVideo(videoUrl);
+        }
+        return null;
+      }, url).catch(() => null);
+
+      if (result && result.ok) {
+        console.log(`✅ Cámara cambiada exitosamente dentro del iframe: ${frame.url().substring(0, 45)}...`);
+        console.log(`📷 Tracks activos en iframe: ${result.tracks}`);
+        cambiadoEnIframe = true;
+      }
+    } catch (err) {
+      // Ignorar errores si el iframe no está completamente cargado o no tiene acceso
+    }
+  }
+
+  if (!cambiadoEnIframe) {
+    console.log(`⚠️ Nota: El video se configuró globalmente pero ningún iframe procesó activamente la función __setCameraVideo aún.`);
+  }
+}
 
 
   /*
@@ -895,7 +880,7 @@ console.log('✅ Segundo Continuar pulsado.');
       'Código'
     ],
     [
-      'Tomar foto'
+      'Tomar una foto'
     ],
     60000
   );
@@ -931,7 +916,7 @@ console.log('✅ Segundo Continuar pulsado.');
       'Clip gameplay'
     ],
     [
-      'Tomar foto'
+      'Tomar una foto'
     ],
     60000
   );
