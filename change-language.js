@@ -277,7 +277,6 @@ const CAMERA_INIT_SCRIPT = () => {
    */
   async function setCameraVideo(page, filename) {
   const url = `http://127.0.0.1:${PORT}/${filename}`;
-     await wait(500);
   console.log(`📷 Cambiando cámara a ${filename} en todos los frames...`);
 
   // 1. Cambiar en la página principal
