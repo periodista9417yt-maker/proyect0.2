@@ -564,75 +564,33 @@ async function waitForButton(
 /*
  * Espera texto O botón.
  */
-async function waitForTextOrButton(
-  page,
-  texts,
-  buttons,
-  timeout = TIMEOUT
-) {
-
+async function waitForTextOrButton(page, texts, buttons, timeout = TIMEOUT) {
   const start = Date.now();
 
-  while (
-    Date.now() - start < timeout
-  ) {
-
-    for (const text of texts) {
-
-      const visible =
-        await page
-          .getByText(text, {
-            exact: true
-          })
-          .first()
-          .isVisible()
-          .catch(() => false);
-
-      if (visible) {
-
-        console.log(
-          `✅ Condición cumplida por texto: "${text}".`
-        );
-
-        return {
-          type: 'text',
-          value: text
-        };
+  while (Date.now() - start < timeout) {
+    // Revisar marcos (Iframes de Persona)
+    const frames = page.frames();
+    for (const frame of frames) {
+      if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
+        for (const text of texts) {
+          if (await frame.getByText(text).first().isVisible().catch(() => false)) {
+            console.log(`✅ Condición cumplida por texto en iframe: "${text}".`);
+            return { type: 'text', value: text };
+          }
+        }
+        for (const button of buttons) {
+          if (await frame.getByRole('button', { name: button }).first().isVisible().catch(() => false)) {
+            console.log(`✅ Condición cumplida por botón en iframe: "${button}".`);
+            return { type: 'button', value: button };
+          }
+        }
       }
     }
-
-    for (const button of buttons) {
-
-      const visible =
-        await page
-          .getByRole('button', {
-            name: button,
-            exact: true
-          })
-          .first()
-          .isVisible()
-          .catch(() => false);
-
-      if (visible) {
-
-        console.log(
-          `✅ Condición cumplida por botón: "${button}".`
-        );
-
-        return {
-          type: 'button',
-          value: button
-        };
-      }
-    }
-
-    await wait(500);
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
-
-  throw new Error(
-    'No apareció ninguna condición esperada.'
-  );
+  throw new Error('No apareció ninguna condición esperada en los plazos definidos.');
 }
+
 
 
 /*
