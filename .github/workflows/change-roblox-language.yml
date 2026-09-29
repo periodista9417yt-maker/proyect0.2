@@ -107,3 +107,18 @@ jobs:
             error-page.html
 
           if-no-files-found: ignore
+
+                # -------------------------------------------------------
+      # Captura si todo termina CORRECTAMENTE
+      # -------------------------------------------------------
+      - name: Upload success artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roblox-success
+          path: |
+            success-screenshot.png
+            video1-status.png
+            video2-status.png
+            video3-status.png
+          if-no-files-found: ignore
