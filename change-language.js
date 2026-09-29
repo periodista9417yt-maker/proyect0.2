@@ -801,11 +801,7 @@ await page.waitForTimeout(1000);
 
 console.log('➡️ Buscando segundo Continuar...');
 
-await clickButton(
-  page,
-  'Continuar',
-  30000
-);
+
 
 console.log('✅ Segundo Continuar pulsado.');
 
