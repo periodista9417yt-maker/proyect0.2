@@ -861,42 +861,75 @@ console.log('✅ Segundo Continuar pulsado.');
     '📷 Comprobando cámara virtual...'
   );
 
-  const cameraInfo =
-    await page.evaluate(async () => {
+  await page.waitForTimeout(2000);
 
-      return window.__getCameraInfo();
+  // =================================================================
+  // NUEVO: ESPERAR A QUE LA INTERFAZ DE LA CÁMARA CARGUE EN EL IFRAME
+  // =================================================================
+  console.log('⏳ Esperando a que aparezca "Centra tu rostro en el círculo"...');
+  
+  const TEXTO_CAMARA = 'Centra tu rostro en el círculo';
+  let iframePersona = null;
+  const deadline = Date.now() + 30000;
 
-    });
+  // Bucle para localizar el iframe activo de Persona que contiene el texto de la cámara
+  while (Date.now() < deadline) {
+    const frames = page.frames();
+    for (const frame of frames) {
+      if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
+        const visible = await frame.getByText(TEXTO_CAMARA).first().isVisible().catch(() => false);
+        if (visible) {
+          iframePersona = frame;
+          break;
+        }
+      }
+    }
+    if (iframePersona) {
+      console.log('✅ Interfaz de la cámara detectada en el iframe.');
+      break;
+    }
+    await page.waitForTimeout(500);
+  }
 
-  console.log(
-    '📷 Cámara:',
-    cameraInfo
-  );
+  if (!iframePersona) {
+    throw new Error('No se encontró el texto "Centra tu rostro en el círculo" dentro de ningún iframe.');
+  }
+
+  // =================================================================
+  // RE-INYECCIÓN FORZADA DEL SCRIPT DE LA CÁMARA EN EL IFRAME ACTUAL
+  // =================================================================
+  console.log('📷 Re-inyectando la cámara virtual en el frame activo de Persona...');
+  await iframePersona.evaluate(`(${CAMERA_INIT_SCRIPT.toString()})();`).catch((err) => {
+    console.error('⚠️ Error al re-inyectar script en iframe:', err.message);
+  });
+
+  await page.waitForTimeout(1000);
 
   /*
    * ----------------------------------------------------------
-   * VIDEO 1
+   * COMPROBACIÓN Y CARGA DEL VIDEO 1
    * ----------------------------------------------------------
    */
+  console.log('📷 Comprobando cámara virtual...');
+  const cameraInfo = await iframePersona.evaluate(async () => {
+    if (typeof window.__getCameraInfo === 'function') {
+      return window.__getCameraInfo();
+    }
+    return { active: false, label: 'No inicializada tras re-inyección' };
+  }).catch(() => ({ active: false }));
 
-  await setCameraVideo(
-    page,
-    'video1.mp4'
-  );
+  console.log('📷 Estado de la Cámara en Iframe:', cameraInfo);
 
-  console.log(
-    '⏳ Esperando "codigo" o "De acuerdo"...'
-  );
+  // Inyectamos el video1.mp4 ahora que el frame está listo y el script activo
+  await setCameraVideo(page, 'video1.mp4');
 
+  console.log('⏳ Esperando "Toma una foto"...');
+
+  // Ajustamos para esperar el botón real de captura que se ve en tu imagen
   await waitForTextOrButton(
     page,
-    [
-      'izquierda',
-      'Código'
-    ],
-    [
-      'Tomar una foto'
-    ],
+    ['izquierda', 'Código'],
+    ['Toma una foto', 'Tomar foto'],
     60000
   );
 
