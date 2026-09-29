@@ -963,6 +963,16 @@ console.log('✅ Segundo Continuar pulsado.');
   console.log(
     '🎉 Flujo completado.'
   );
+  // ↓↓↓ NUEVO: GUARDAR CAPTURA DE PANTALLA EXITOSA ↓↓↓
+  try {
+    await page.screenshot({
+      path: 'success-screenshot.png',
+      fullPage: true
+    });
+    console.log('📸 Captura de éxito guardada: success-screenshot.png');
+  } catch (screenshotError) {
+    console.error('⚠️ No se pudo tomar la captura de éxito:', screenshotError.message);
+  }
 }
 
 
