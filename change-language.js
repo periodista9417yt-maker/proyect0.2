@@ -887,7 +887,7 @@ console.log('✅ Segundo Continuar pulsado.');
   await waitForTextOrButton(
     page,
     ['izquierda', 'Código'],
-    ['Toma una foto', 'Tomar foto'],
+    ['Toma una foto', 'Toma una foto'],
     60000
   );
 
@@ -919,10 +919,10 @@ console.log('✅ Segundo Continuar pulsado.');
     page,
     [
       'derecha',
-      'Clip gameplay'
+      'Gira'
     ],
     [
-      'Tomar una foto'
+      'Toma una foto'
     ],
     60000
   );
@@ -956,7 +956,7 @@ console.log('✅ Segundo Continuar pulsado.');
 
   await clickButton(
     page,
-    'Esta bien',
+    'Toma una foto',
     60000
   );
 
