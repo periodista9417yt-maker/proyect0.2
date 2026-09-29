@@ -79,6 +79,18 @@ jobs:
           node change-language.js
 
 
+  # -------------------------------------------------------
+      # Captura si todo termina CORRECTAMENTE (NUEVO)
+      # -------------------------------------------------------
+      - name: Upload success artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roblox-success
+          path: success-screenshot.png
+          if-no-files-found: ignore
+
+
       # -------------------------------------------------------
       # Captura si falla
       # -------------------------------------------------------
