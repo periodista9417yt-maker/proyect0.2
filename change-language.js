@@ -298,7 +298,6 @@ async function waitForTextOrButton(page, texts, buttons, timeout = TIMEOUT) {
   throw new Error('No apareció ninguna condición esperada en los plazos definidos.');
 }
 
-
 /*
  * ------------------------------------------------------------
  * CAMBIAR VIDEO DE CÁMARA (SOPORTE GLOBAL ESTABLE)
@@ -316,34 +315,40 @@ async function setCameraVideo(page, filename) {
     }, url).catch(() => {});
   } catch (_) {}
 
-const frames = page.frames();
-let cambiadoEnIframe = false;
-for (const frame of frames) {
-const frameUrl = frame.url();
-if (frameUrl.includes('withpersona.com') || frameUrl.includes('inquiry')) {
-try {
-const result = await frame.evaluate(async (videoUrl) => {
-if (typeof window.__setCameraVideo === 'function') {
-return await window.__setCameraVideo(videoUrl);
+  const frames = page.frames();
+  let cambiadoEnIframe = false;
+
+  for (const frame of frames) {
+    const frameUrl = frame.url();
+    if (frameUrl.includes('withpersona.com') || frameUrl.includes('inquiry')) {
+      try {
+        const result = await frame.evaluate(async (videoUrl) => {
+          if (typeof window.__setCameraVideo === 'function') {
+            return await window.__setCameraVideo(videoUrl);
+          }
+          return { error: 'No inicializado en este frame' };
+        }, url).catch((e) => ({ error: e.message }));
+
+        // CORRECCIÓN DE LA LÍNEA 332: Agregadas comillas de texto para fijar el string
+        if (result && result.ok) {
+          console.log('✅ Cámara cambiada exitosamente DENTRO del iframe de Persona.');
+          cambiadoEnIframe = true;
+        } else if (result && result.error) {
+          console.log(`⚠️ Alerta en iframe: ${result.error}`);
+        }
+      } catch (err) {
+        console.log(`⚠️ Error de evaluación: ${err.message}`);
+      }
+    }
+  }
+
+  if (!cambiadoEnIframe) {
+    console.log(`⏳ Esperando propagación de vídeo en el frame de la cámara...`);
+    await page.waitForTimeout(1500);
+  }
 }
-return { error: 'No inicializado en este frame' };
-}, url).catch((e) => ({ error: e.message }));
-if (result && result.ok) {
-console.log(✅ Cámara cambiada exitosamente DENTRO del iframe de Persona.);
-cambiadoEnIframe = true;
-} else if (result && result.error) {
-console.log(⚠️ Alerta en iframe: ${result.error});
-}
-} catch (err) {
-console.log(⚠️ Error de evaluación: ${err.message});
-}
-}
-}
-if (!cambiadoEnIframe) {
-console.log(⏳ Esperando propagación de vídeo en el frame de la cámara...);
-await page.waitForTimeout(1500);
-}
-}
+
+
 /*
 • CAMBIAR IDIOMA
 */
