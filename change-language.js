@@ -122,7 +122,6 @@ function startVideoServer() {
  * CÁMARA VIRTUAL DENTRO DE LA PÁGINA (CORREGIDA)
  * ------------------------------------------------------------
  */
-
 const CAMERA_INIT_SCRIPT = () => {
   const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
 
@@ -216,31 +215,6 @@ const CAMERA_INIT_SCRIPT = () => {
     }
     return originalGetUserMedia(constraints);
   };
-};
-
-
-  window.__getCameraInfo = async function () {
-    const stream = await createCamera();
-    const track = stream.getVideoTracks()[0];
-
-    return {
-      active: track?.readyState === 'live',
-      tracks: stream.getVideoTracks().length,
-      label: track?.label || 'Fake Camera'
-    };
-  };
-
-  navigator.mediaDevices.getUserMedia = async function (
-    constraints
-  ) {
-    if (constraints && constraints.video) {
-      return createCamera();
-    }
-
-    return originalGetUserMedia(constraints);
-  };
-
-  window.__cameraAutomationReady = true;
 };
 
 
