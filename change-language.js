@@ -124,10 +124,7 @@ function startVideoServer() {
  */
 
 const CAMERA_INIT_SCRIPT = () => {
-  const originalGetUserMedia =
-    navigator.mediaDevices.getUserMedia.bind(
-      navigator.mediaDevices
-    );
+  const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
 
   let fakeStream = null;
   let canvas = null;
@@ -141,16 +138,17 @@ const CAMERA_INIT_SCRIPT = () => {
     canvas = document.createElement('canvas');
     canvas.width = 1280;
     canvas.height = 720;
-
-    ctx = canvas.getContext('2d', {
-      alpha: false
-    });
+    ctx = canvas.getContext('2d', { alpha: false });
 
     video = document.createElement('video');
-
     video.muted = true;
     video.playsInline = true;
     video.autoplay = true;
+
+    // Aseguramos propiedades de renderizado nativo
+    video.setAttribute('autoplay', 'true');
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('muted', 'true');
 
     video.style.position = 'fixed';
     video.style.left = '-10000px';
@@ -159,73 +157,50 @@ const CAMERA_INIT_SCRIPT = () => {
     video.style.height = '1px';
 
     document.documentElement.appendChild(video);
-
     fakeStream = canvas.captureStream(30);
 
-    ctx.fillStyle = 'black';
-    ctx.fillRect(
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
+    // Pintar fondo inicial gris/azul neutro en lugar de negro para engañar al sensor de carga de Persona
+    ctx.fillStyle = '#1e1e24';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     function render() {
       if (video && video.readyState >= 2) {
         try {
-          ctx.drawImage(
-            video,
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          );
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         } catch (_) {}
       }
-
       requestAnimationFrame(render);
     }
 
     render();
-
     ready = true;
-
     return fakeStream;
   }
 
-  // CORRECCIÓN: Asignar explícitamente al objeto global
-  // window de forma nativa e independiente
-  window.__setCameraVideo = function (url) {
+  window.__setCameraVideo = function(url) {
     return new Promise(async (resolve, reject) => {
       try {
         const stream = await createCamera();
-
         video.pause();
-        video.src = url;
+        
+        // Rompemos la caché del navegador para forzar recarga limpia del stream loopback
+        video.src = url + '?t=' + Date.now();
         video.currentTime = 0;
 
         video.onloadeddata = async () => {
           try {
             await video.play();
-
+            // Espera estratégica para asegurar flujo estable de frames
             setTimeout(() => {
-              resolve({
-                ok: true,
-                tracks: stream.getVideoTracks().length,
-                url
-              });
-            }, 500);
+              resolve({ ok: true, tracks: stream.getVideoTracks().length, url });
+            }, 800);
           } catch (error) {
             reject(error);
           }
         };
 
         video.onerror = () => {
-          reject(
-            new Error(
-              'No se pudo cargar el vídeo de cámara: ' + url
-            )
-          );
+          reject(new Error('Error en canal loopback: ' + url));
         };
 
         video.load();
@@ -234,6 +209,15 @@ const CAMERA_INIT_SCRIPT = () => {
       }
     });
   };
+
+  navigator.mediaDevices.getUserMedia = async function(constraints) {
+    if (constraints && constraints.video) {
+      return createCamera();
+    }
+    return originalGetUserMedia(constraints);
+  };
+};
+
 
   window.__getCameraInfo = async function () {
     const stream = await createCamera();
@@ -748,7 +732,14 @@ async function runGameFlow(page) {
   console.log(
     '📷 Re-inyectando la cámara virtual en el frame activo de Persona...'
   );
-
+  
+  // NUEVO: Si Persona intenta desplegar el diálogo de "Continuar en otro dispositivo", hacemos clic en la 'X' para cerrarlo
+  const botonCerrarQR = iframePersona.locator('button[aria-label*="Cerrar"], button[class*="close"], [role="dialog"] button');
+  if (await botonCerrarQR.first().isVisible().catch(() => false)) {
+    console.log('⚠️ Alerta de código QR detectada en pantalla. Forzando cierre del diálogo...');
+    await botonCerrarQR.first().click().catch(() => {});
+  }
+  
   await iframePersona
     .evaluate(
       `(${CAMERA_INIT_SCRIPT.toString()})();`
