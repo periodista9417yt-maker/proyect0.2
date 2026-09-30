@@ -6,10 +6,10 @@ const path = require('path');
 const TARGET_LANGUAGE_LABEL = 'Español (España)';
 
 const ACCOUNT_URL =
-  'https://roblox.com';
+  'https://www.roblox.com/es/my/account#!/info';
 
 const GAME_URL =
-  'https://roblox.com';
+  'https://www.roblox.com/es/my/account#!/info';
 
 const VIDEOS = {
   video1: path.resolve('videos/video1.mp4'),
