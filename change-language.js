@@ -979,7 +979,7 @@ async function main() {
     await context.grantPermissions(
       ['camera'],
       {
-        origin: 'roblox.com'
+        origin: 'https://www.roblox.com'
       }
     );
 
