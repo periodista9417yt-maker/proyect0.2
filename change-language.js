@@ -33,42 +33,39 @@ function startVideoServer() {
     const server = http.createServer((req, res) => {
       let requested = req.url || '';
 
+      // Limpiamos barras iniciales y parámetros de caché (?t=12345)
       if (requested.startsWith('/')) {
         requested = requested.substring(1);
       }
+      requested = requested.split('?')[0]; // Ignora el token de tiempo para que la ruta sea limpia
 
-      const filePath = path.resolve('videos', requested);
+      console.log(`📡 Servidor de vídeo recibió petición para: "${requested}"`);
 
-      const allowedFiles = [
-        path.resolve(VIDEOS.video1),
-        path.resolve(VIDEOS.video2),
-        path.resolve(VIDEOS.video3)
-      ];
+      // Mapeo directo y seguro por nombre de archivo para evitar fallos de path.resolve
+      let targetPath = '';
+      if (requested === 'video1.mp4') targetPath = VIDEOS.video1;
+      else if (requested === 'video2.mp4') targetPath = VIDEOS.video2;
+      else if (requested === 'video3.mp4') targetPath = VIDEOS.video3;
 
-      if (!allowedFiles.includes(filePath) || !fs.existsSync(filePath)) {
-        res.writeHead(404, {
-          'Access-Control-Allow-Origin': '*'
-        });
-
+      // Si no coincide con ninguno de los tres vídeos válidos
+      if (!targetPath || !fs.existsSync(targetPath)) {
+        console.error(`❌ Archivo no encontrado o no permitido: "${requested}" -> Ruta: ${targetPath}`);
+        res.writeHead(404, { 'Access-Control-Allow-Origin': '*' });
         res.end('Not found');
         return;
       }
 
-      const stat = fs.statSync(filePath);
+      const stat = fs.statSync(targetPath);
       const range = req.headers.range;
 
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Headers', 'Range');
-      res.setHeader(
-        'Access-Control-Expose-Headers',
-        'Content-Range, Accept-Ranges, Content-Length'
-      );
+      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
       res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Content-Type', 'video/mp4');
 
       if (range) {
         const match = /bytes=(\d+)-(\d*)/.exec(range);
-
         if (!match) {
           res.writeHead(416);
           res.end();
@@ -76,10 +73,7 @@ function startVideoServer() {
         }
 
         const start = Number(match[1]);
-        let end = match[2]
-          ? Number(match[2])
-          : stat.size - 1;
-
+        let end = match[2] ? Number(match[2]) : stat.size - 1;
         if (end >= stat.size) {
           end = stat.size - 1;
         }
@@ -91,26 +85,17 @@ function startVideoServer() {
           'Content-Length': chunkSize
         });
 
-        fs.createReadStream(filePath, {
-          start,
-          end
-        }).pipe(res);
+        fs.createReadStream(targetPath, { start, end }).pipe(res);
       } else {
-        res.writeHead(200, {
-          'Content-Length': stat.size
-        });
-
-        fs.createReadStream(filePath).pipe(res);
+        res.writeHead(200, { 'Content-Length': stat.size });
+        fs.createReadStream(targetPath).pipe(res);
       }
     });
 
     server.on('error', reject);
 
     server.listen(PORT, '127.0.0.1', () => {
-      console.log(
-        `🎥 Servidor de vídeos iniciado en http://127.0.0.1:${PORT}`
-      );
-
+      console.log(`🎥 Servidor de vídeos iniciado con éxito en http://127.0.0.1:${PORT}`);
       resolve(server);
     });
   });
