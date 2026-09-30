@@ -621,7 +621,7 @@ async function runGameFlow(page) {
   await clickButton(
     page,
     'Continuar',
-    30000
+    50000
   );
 
   console.log(
@@ -637,7 +637,7 @@ async function runGameFlow(page) {
   await clickButton(
     page,
     'Continuar',
-    30000
+    50000
   );
 
   console.log(
@@ -654,7 +654,7 @@ async function runGameFlow(page) {
   let iframePersona = null;
 
   const deadline =
-    Date.now() + 30000;
+    Date.now() + 40000;
 
   while (Date.now() < deadline) {
     const frames = page.frames();
