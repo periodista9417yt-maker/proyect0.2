@@ -478,7 +478,7 @@ async function runGameFlow(page) {
 
   try {
     await clickButton(page, 'Esta bien', 10000);
-  } catch (\_) {
+  } catch (_) {
   await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 }
 
@@ -534,7 +534,7 @@ async function main() {
     const page = await context.newPage();
 
     // Bypass definitivo de restricciones de frames
-    await page.route('\*\*/\*', async route => {
+    await page.route('**/*', async route => {
       try {
         const response = await route.fetch();
         const headers = response.headers();
