@@ -333,8 +333,8 @@ async function setCameraVideo(page, filename) {
       try {
         // No ocultamos errores con catch vacíos para ver reportes reales de descodificación en CI
         const result = await frame.evaluate(async (videoUrl) => {
-          if (typeof window.\_\_setCameraVideo === 'function') {
-            return await window.\_\_setCameraVideo(videoUrl);
+          if (typeof window.__setCameraVideo === 'function') {
+            return await window.__setCameraVideo(videoUrl);
           }
           return { error: 'El script de la cámara virtual no está presente en este frame.' };
         }, url);
