@@ -440,52 +440,65 @@ async function runGameFlow(page) {
 
 
 
-/*
-• VIDEO 1: Rostro de Frente
-*/
+  /*
+   * ----------------------------------------------------------
+   * VIDEO 1: Rostro de Frente
+   * ----------------------------------------------------------
+   */
   await setCameraVideo(page, 'video1.mp4');
   await page.screenshot({ path: 'video1-status.png', fullPage: true });
+
+  // Damos 4 segundos para que el motor de Persona analice el video de frente antes de disparar el clic
+  console.log('⏳ Sincronizando: Esperando que Persona procese el Rostro de Frente...');
+  await page.waitForTimeout(4000);
 
   console.log('⏳ Esperando acción de captura inicial...');
   await waitForTextOrButton(page, ['izquierda', 'Gira', 'Mirar'], ['Toma una foto'], 60000);
   await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 
-
-/*
-• VIDEO 2: Rostro de Perfil Izquierdo
-*/
-
+  /*
+   * ----------------------------------------------------------
+   * VIDEO 2: Rostro de Perfil Izquierdo
+   * ----------------------------------------------------------
+   */
   await page.waitForTimeout(2000);
   await setCameraVideo(page, 'video2.mp4');
   await page.screenshot({ path: 'video2-status.png', fullPage: true });
+
+  // Damos 4 segundos para que Persona registre el cambio de perfil
+  console.log('⏳ Sincronizando: Esperando que Persona procese el Perfil Izquierdo...');
+  await page.waitForTimeout(4000);
 
   console.log('⏳ Esperando validación de perfil izquierdo...');
   await waitForTextOrButton(page, ['derecha', 'Gira la cara'], ['Toma una foto'], 60000);
   await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 
-
-
-/*
-• VIDEO 3: Finalización del Flujo
-*/
-
+  /*
+   * ----------------------------------------------------------
+   * VIDEO 3: Finalización del Flujo
+   * ----------------------------------------------------------
+   */
   await page.waitForTimeout(2000);
   await setCameraVideo(page, 'video3.mp4');
   await page.screenshot({ path: 'video3-status.png', fullPage: true });
 
+  // Espera final para el último procesamiento biométrico
+  console.log('⏳ Sincronizando: Esperando procesamiento final de verificación...');
+  await page.waitForTimeout(4000);
+
   console.log('⏳ Esperando pantalla final de éxito...');
-  await waitForTextOrButton(page, ['Procesando', 'Completado', 'Éxito'], ['Esta bien', 'Toma una foto'], 60000);
+  await waitForTextOrButton(page, ['Procesando', 'Completado', 'Éxito', 'Validando'], ['Esta bien', 'Toma una foto'], 60000);
 
+  // Intentamos presionar "Esta bien" de forma controlada; si no aparece, evitamos pulsar botones aleatorios
   try {
-    await clickButton(page, 'Esta bien', 10000);
+    await clickButton(page, 'Esta bien', 8000);
   } catch (_) {
-  await clickButton(page, 'Toma una foto', 5000).catch(() => {});
-}
+    console.log('ℹ️ El botón "Esta bien" no apareció o el flujo cerró automáticamente el modal de Persona.');
+  }
 
-console.log('🎉 Flujo completado.');
-await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
+  console.log('🎉 Flujo completado de forma segura.');
+  await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
 }
-
 
 
 /*
