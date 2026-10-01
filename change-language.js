@@ -317,10 +317,9 @@ async function waitForTextOrButton(page, texts, buttons, timeout = TIMEOUT) {
 
 
 
-
-1. CAMBIAR VIDEO EXCLUSIVAMENTE EN EL IFRAME DE PERSONA
-
-
+/*
+• CAMBIAR VIDEO EXCLUSIVAMENTE EN EL IFRAME DE PERSONA
+*/
 async function setCameraVideo(page, filename) {
   const url = `http://127.0.0.1:${PORT}/${filename}`;
   console.log(`📷 Cambiando cámara a ${filename} SOLO en Persona...`);
@@ -359,11 +358,9 @@ if (!cambiadoEnIframe) {
 }
 
 
-
-
-1. CAMBIAR IDIOMA ROBLOX
-
-
+/*
+• CAMBIAR IDIOMA ROBLOX
+*/
 async function changeLanguage(page) {
   console.log('➡️ Abriendo página de cuenta...');
   await page.goto(ACCOUNT_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -388,9 +385,9 @@ await wait(2000);
 
 
 
-
-1. FLUJO PRINCIPAL DE VERIFICACIÓN
-
+/*
+• FLUJO PRINCIPAL DE VERIFICACIÓN
+*/
 
 async function runGameFlow(page) {
   console.log('➡️ Abriendo Build the Pyramid...');
@@ -443,10 +440,9 @@ async function runGameFlow(page) {
 
 
 
-
-  1. VIDEO 1: Rostro de Frente
-
-
+/*
+• VIDEO 1: Rostro de Frente
+*/
   await setCameraVideo(page, 'video1.mp4');
   await page.screenshot({ path: 'video1-status.png', fullPage: true });
 
@@ -455,10 +451,9 @@ async function runGameFlow(page) {
   await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 
 
-
-
-  1. VIDEO 2: Rostro de Perfil Izquierdo
-
+/*
+• VIDEO 2: Rostro de Perfil Izquierdo
+*/
 
   await page.waitForTimeout(2000);
   await setCameraVideo(page, 'video2.mp4');
@@ -470,9 +465,9 @@ async function runGameFlow(page) {
 
 
 
-
-  1. VIDEO 3: Finalización del Flujo
-
+/*
+• VIDEO 3: Finalización del Flujo
+*/
 
   await page.waitForTimeout(2000);
   await setCameraVideo(page, 'video3.mp4');
@@ -493,9 +488,9 @@ await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
 
 
 
-
-1. MAIN
-
+/*
+• MAIN
+*/
 
 async function main() {
   console.log('🚀 Iniciando automatización...');
@@ -531,7 +526,7 @@ async function main() {
       permissions: ['camera']
     });
 
-    await context.grantPermissions(['camera'], { origin: 'roblox.com' });
+    await context.grantPermissions(['camera'], { origin: 'https://www.roblox.com' });
     await context.addCookies([
     { name: '.ROBLOSECURITY', value: cookie, domain: '.roblox.com', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }
     ]);
