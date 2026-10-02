@@ -532,7 +532,7 @@ console.log('⏳ Esperando pantalla final de éxito...');
 await waitForTextOrButton(page, ['Procesando', 'Completado', 'Éxito', 'Validando'], ['Esta bien', 'Toma una foto'], 60000);
 
 try {
-await clickButton(page, 'Esta bien', 8000);
+await clickButton(page, 'Toma una foto', 8000);
 } catch (_) {
 console.log('ℹ️ El botón "Esta bien" no apareció o el flujo cerró automáticamente el modal.');
 }
