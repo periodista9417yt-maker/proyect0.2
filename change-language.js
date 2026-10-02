@@ -301,8 +301,6 @@ async function waitForTextOrButton(page, texts, buttons, timeout = TIMEOUT) {
 
 
 
-Usa el código con precaución.
-
 }
 for (const button of buttons) {
 if (await frame.getByRole('button', { name: button }).first().isVisible().catch(() => false)) {
