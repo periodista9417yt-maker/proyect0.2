@@ -4,8 +4,8 @@ const http = require('http');
 const path = require('path');
 
 const TARGET_LANGUAGE_LABEL = 'Español (España)';
-const ACCOUNT_URL = 'https://www.roblox.com/es/my/account#!/info';
-const GAME_URL = 'https://www.roblox.com/es/my/account#!/info';
+const ACCOUNT_URL = 'https://roblox.com';
+const GAME_URL = 'https://roblox.com';
 
 const VIDEOS = {
   video1: path.resolve('videos/video1.mp4'),
@@ -18,7 +18,7 @@ const TIMEOUT = 30000;
 
 /*
  * ------------------------------------------------------------
- * SERVIDOR LOCAL DE VÍDEOS (OPTIMIZADO)
+ * SERVIDOR LOCAL DE VÍDEOS
  * ------------------------------------------------------------
  */
 function startVideoServer() {
@@ -122,8 +122,6 @@ const CAMERA_INIT_SCRIPT = () => {
     video.style.height = '1px';
 
     document.documentElement.appendChild(video);
-    
-    // Captura constante a 30fps fijando el flujo del stream
     fakeStream = canvas.captureStream(30);
 
     ctx.fillStyle = '#1e1e24';
@@ -143,28 +141,19 @@ const CAMERA_INIT_SCRIPT = () => {
     return fakeStream;
   }
 
-    window.__setCameraVideo = function(url) {
+  window.__setCameraVideo = function(url) {
     return new Promise(async (resolve, reject) => {
       try {
         const stream = await createCamera();
         
-        // ========================================================
-        // CORRECCIÓN: DESVINCULACIÓN Y LIMPIEZA COMPLETA DEL DEMUXER
-        // ========================================================
         video.pause();
-        
-        // Removemos los controladores de eventos anteriores para evitar fugas de memoria
         video.onloadeddata = null;
         video.onerror = null;
-        
-        // Forzamos al navegador a liberar el archivo de video anterior (video1.mp4)
         video.src = ''; 
         video.load(); 
         
-        // Damos un respiro mínimo de microsegundos para que la GPU limpie el contexto abierto
         await new Promise(r => setTimeout(r, 100));
 
-        // Establecemos el nuevo origen con el token de tiempo limpio
         video.src = url + '?t=' + Date.now();
         video.load();
 
@@ -215,14 +204,13 @@ const CAMERA_INIT_SCRIPT = () => {
 
         video.onerror = () => {
           const error = video.error;
-          reject(new Error(`Error de descodificación de vídeo: ${error ? `error.code: {error.message}` : 'Formato no soportado o Demuxer bloqueado'}`));
+          reject(new Error(`Error de descodificación de vídeo: ${error ? error.message : 'Formato no soportado o Demuxer bloqueado'}`));
         };
       } catch (error) {
         reject(error);
       }
     });
   };
-
 
   navigator.mediaDevices.getUserMedia = async function(constraints) {
     if (constraints && constraints.video) {
@@ -313,12 +301,12 @@ async function waitForTextOrButton(page, texts, buttons, timeout = TIMEOUT) {
     for (const frame of frames) {
       if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
         for (const text of texts) {
-          if (await frame.getByText(text).first().isVisible().catch(() => false)) {
-            return { type: 'text', value: text };
-          }
 
 
 
+if (await frame.getByText(text).first().isVisible().catch(() => false)) {
+return { type: 'text', value: text };
+}
 }
 for (const button of buttons) {
 if (await frame.getByRole('button', { name: button }).first().isVisible().catch(() => false)) {
@@ -462,8 +450,6 @@ if (!iframePersona) {
 throw new Error('No se encontró la interfaz inicial de la cámara de Persona.');
 }
 
-// ELIMINADO EL BLOQUE EL BOTÓN DE CIERRE DEL QR QUE CAUSABA EL DIÁLOGO DE CANCELACIÓN EN ROBLOX
-
 /*
 
 -
@@ -484,6 +470,9 @@ await page.waitForTimeout(4000);
 
 console.log('⏳ Esperando acción de captura inicial...');
 await waitForTextOrButton(page, ['izquierda', 'Gira', 'Mirar'], ['Toma una foto'], 60000);
+
+// ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DEL CLIC ↓↓↓
+await page.waitForTimeout(1500);
 await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 
 /*
@@ -507,6 +496,9 @@ await page.waitForTimeout(4000);
 
 console.log('⏳ Esperando validación de perfil izquierdo...');
 await waitForTextOrButton(page, ['derecha', 'Gira la cara'], ['Toma una foto'], 60000);
+
+// ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DEL CLIC ↓↓↓
+await page.waitForTimeout(1500);
 await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 
 /*
@@ -531,10 +523,12 @@ await page.waitForTimeout(4000);
 console.log('⏳ Esperando pantalla final de éxito...');
 await waitForTextOrButton(page, ['Procesando', 'Completado', 'Éxito', 'Validando'], ['Esta bien', 'Toma una foto'], 60000);
 
+// ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DE CONFIRMAR LA SALIDA ↓↓↓
+await page.waitForTimeout(1500);
 try {
 await clickButton(page, 'Toma una foto', 8000);
 } catch (_) {
-console.log('ℹ️ El botón "Esta bien" no apareció o el flujo cerró automáticamente el modal.');
+console.log('ℹ️ El botón "Toma una foto" no apareció o el flujo cerró automáticamente el modal.');
 }
 
 console.log('🎉 Flujo completado de forma segura.');
@@ -592,7 +586,6 @@ await context.addCookies([
 { name: '.ROBLOSECURITY', value: cookie, domain: '.roblox.com', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }
 ]);
 
-// INYECCIÓN COMPLETA ANTICIPADA: Inyectamos el script ANTES de realizar cualquier navegación
 await context.addInitScript({ content: `(${CAMERA_INIT_SCRIPT.toString()})();` });
 
 const page = await context.newPage();
