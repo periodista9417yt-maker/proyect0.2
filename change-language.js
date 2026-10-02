@@ -4,8 +4,8 @@ const http = require('http');
 const path = require('path');
 
 const TARGET_LANGUAGE_LABEL = 'Español (España)';
-const ACCOUNT_URL = 'https://roblox.com';
-const GAME_URL = 'https://roblox.com';
+const ACCOUNT_URL = 'https://www.roblox.com/es/my/account#!/info';
+const GAME_URL = 'https://www.roblox.com/es/my/account#!/info';
 
 const VIDEOS = {
   video1: path.resolve('videos/video1.mp4'),
@@ -581,7 +581,7 @@ userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML,
 permissions: ['camera']
 });
 
-await context.grantPermissions(['camera'], { origin: 'https://www.roblox.com' });
+await context.grantPermissions(['camera'], { origin: 'https://roblox.com' });
 await context.addCookies([
 { name: '.ROBLOSECURITY', value: cookie, domain: '.roblox.com', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }
 ]);
