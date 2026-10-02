@@ -143,11 +143,28 @@ const CAMERA_INIT_SCRIPT = () => {
     return fakeStream;
   }
 
-  window.__setCameraVideo = function(url) {
+    window.__setCameraVideo = function(url) {
     return new Promise(async (resolve, reject) => {
       try {
         const stream = await createCamera();
+        
+        // ========================================================
+        // CORRECCIÓN: DESVINCULACIÓN Y LIMPIEZA COMPLETA DEL DEMUXER
+        // ========================================================
         video.pause();
+        
+        // Removemos los controladores de eventos anteriores para evitar fugas de memoria
+        video.onloadeddata = null;
+        video.onerror = null;
+        
+        // Forzamos al navegador a liberar el archivo de video anterior (video1.mp4)
+        video.src = ''; 
+        video.load(); 
+        
+        // Damos un respiro mínimo de microsegundos para que la GPU limpie el contexto abierto
+        await new Promise(r => setTimeout(r, 100));
+
+        // Establecemos el nuevo origen con el token de tiempo limpio
         video.src = url + '?t=' + Date.now();
         video.load();
 
@@ -198,13 +215,14 @@ const CAMERA_INIT_SCRIPT = () => {
 
         video.onerror = () => {
           const error = video.error;
-          reject(new Error(`Error de descodificación de vídeo: ${error ? `${error.code}: ${error.message}` : 'Formato no soportado'}`));
+          reject(new Error(`Error de descodificación de vídeo: ${error ? `error.code: {error.message}` : 'Formato no soportado o Demuxer bloqueado'}`));
         };
       } catch (error) {
         reject(error);
       }
     });
   };
+
 
   navigator.mediaDevices.getUserMedia = async function(constraints) {
     if (constraints && constraints.video) {
