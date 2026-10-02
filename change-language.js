@@ -4,8 +4,8 @@ const http = require('http');
 const path = require('path');
 
 const TARGET_LANGUAGE_LABEL = 'Español (España)';
-const ACCOUNT_URL = 'https://www.roblox.com/my/account#!/info';
-const GAME_URL = 'https://www.roblox.com/my/account#!/info';
+const ACCOUNT_URL = 'https://roblox.com';
+const GAME_URL = 'https://roblox.com';
 
 const VIDEOS = {
   video1: path.resolve('videos/video1.mp4'),
@@ -17,10 +17,10 @@ const PORT = 8765;
 const TIMEOUT = 30000;
 
 /*
-* ------------------------------------------------------------
-* SERVIDOR LOCAL DE VÍDEOS
-* ------------------------------------------------------------
-*/
+ * ------------------------------------------------------------
+ * SERVIDOR LOCAL DE VÍDEOS (OPTIMIZADO)
+ * ------------------------------------------------------------
+ */
 function startVideoServer() {
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
@@ -71,24 +71,24 @@ function startVideoServer() {
         });
         fs.createReadStream(targetPath, { start, end }).pipe(res);
       } else {
-      res.writeHead(200, { 'Content-Length': stat.size });
-      fs.createReadStream(targetPath).pipe(res);
-    }
-  });
+        res.writeHead(200, { 'Content-Length': stat.size });
+        fs.createReadStream(targetPath).pipe(res);
+      }
+    });
 
-  server.on('error', reject);
-  server.listen(PORT, '127.0.0.1', () => {
-    console.log(`🎥 Servidor de vídeos iniciado en http://127.0.0.1:${PORT}`);
-    resolve(server);
+    server.on('error', reject);
+    server.listen(PORT, '127.0.0.1', () => {
+      console.log(`🎥 Servidor de vídeos iniciado en http://127.0.0.1:${PORT}`);
+      resolve(server);
+    });
   });
-});
 }
 
 /*
-* ------------------------------------------------------------
-* CÁMARA VIRTUAL - SCRIPT DE INYECCIÓN
-* ------------------------------------------------------------
-*/
+ * ------------------------------------------------------------
+ * CÁMARA VIRTUAL - SCRIPT DE INYECCIÓN GLOBAL
+ * ------------------------------------------------------------
+ */
 const CAMERA_INIT_SCRIPT = () => {
   const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
 
@@ -110,7 +110,7 @@ const CAMERA_INIT_SCRIPT = () => {
     video.muted = true;
     video.playsInline = true;
     video.autoplay = true;
-
+    
     video.setAttribute('autoplay', 'true');
     video.setAttribute('playsinline', 'true');
     video.setAttribute('muted', 'true');
@@ -122,9 +122,10 @@ const CAMERA_INIT_SCRIPT = () => {
     video.style.height = '1px';
 
     document.documentElement.appendChild(video);
+    
+    // Captura constante a 30fps fijando el flujo del stream
     fakeStream = canvas.captureStream(30);
 
-    // Color inicial neutro (gris oscuro) para identificar si el canvas se queda estático
     ctx.fillStyle = '#1e1e24';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -147,8 +148,6 @@ const CAMERA_INIT_SCRIPT = () => {
       try {
         const stream = await createCamera();
         video.pause();
-
-        // Asignación corregida: load() va después de definir el origen src
         video.src = url + '?t=' + Date.now();
         video.load();
 
@@ -157,69 +156,69 @@ const CAMERA_INIT_SCRIPT = () => {
             await video.play();
             video.currentTime = 0;
 
-            // DIAGNÓSTICO DE CÓDEC Y REPRODUCCIÓN EN CONSOLA
             console.log('📊 DIAGNÓSTICO MULTIMEDIA EN IFRAME:');
             console.log('readyState:', video.readyState);
-            console.log('networkState:', video.networkState);
             console.log('videoWidth:', video.videoWidth);
             console.log('videoHeight:', video.videoHeight);
-            console.log('paused:', video.paused);
 
-            // Verificación activa de píxeles no negros en el Canvas
             setTimeout(() => {
               try {
-                const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                let nonBlack = 0;
-                for (let i = 0; i < pixels.length; i += 40) {
-                  // Validamos que se desvíe del negro absoluto y de nuestro fondo gris #1e1e24 (30,30,36)
-                  if (pixels[i] > 35 || pixels[i+1] > 35 || pixels[i+2] > 40) {
-                    nonBlack++;
-                  }
+                const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                let min = 255, max = 0, sum = 0;
+                for (let i = 0; i < image.data.length; i += 4) {
+                  const r = image.data[i];
+                  const g = image.data[i + 1];
+                  const b = image.data[i + 2];
+                  min = Math.min(min, r, g, b);
+                  max = Math.max(max, r, g, b);
+                  sum += r + g + b;
                 }
-
-                console.log(`🖼️ Píxeles activos detectados en Canvas: ${nonBlack}`);
-                if (nonBlack === 0 && video.videoWidth === 0) {
-                  console.error('❌ ERROR CRÍTICO: El códec de este MP4 no es soportado por este navegador.');
-                }
+                
+                console.log('🎥 Canvas diagnóstico de píxeles:', {
+                  min,
+                  max,
+                  average: sum / (image.data.length / 4) / 3
+                });
               } catch (e) {
-              console.error('⚠️ No se pudo leer ImageData del canvas:', e.message);
-            }
+                console.error('⚠️ No se pudo leer ImageData:', e.message);
+              }
 
-            resolve({
-              ok: true,
-              tracks: stream.getVideoTracks().length,
-              width: video.videoWidth,
-              height: video.videoHeight
-            });
-          }, 1000);
+              resolve({ 
+                ok: true, 
+                tracks: stream.getVideoTracks().length, 
+                width: video.videoWidth, 
+                height: video.videoHeight 
+              });
+            }, 1000);
 
-        } catch (error) {
+          } catch (error) {
+            reject(error);
+          }
+        };
+
+        video.onerror = () => {
+          const error = video.error;
+          reject(new Error(`Error de descodificación de vídeo: ${error ? `${error.code}: ${error.message}` : 'Formato no soportado'}`));
+        };
+      } catch (error) {
         reject(error);
       }
-    };
+    });
+  };
 
-    video.onerror = (e) => {
-      reject(new Error('Error de descodificación de vídeo: ' + video.error ? video.error.message : 'Formato no soportado'));
-    };
-  } catch (error) {
-  reject(error);
-}
-});
-};
-
-navigator.mediaDevices.getUserMedia = async function(constraints) {
-  if (constraints && constraints.video) {
-    return createCamera();
-  }
-  return originalGetUserMedia(constraints);
-};
+  navigator.mediaDevices.getUserMedia = async function(constraints) {
+    if (constraints && constraints.video) {
+      return createCamera();
+    }
+    return originalGetUserMedia(constraints);
+  };
 };
 
 /*
-* ------------------------------------------------------------
-* UTILIDADES DE BÚSQUEDA Y ESPERA
-* ------------------------------------------------------------
-*/
+ * ------------------------------------------------------------
+ * UTILIDADES DE BÚSQUEDA Y ESPERA
+ * ------------------------------------------------------------
+ */
 async function wait(ms) {
   await new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -279,22 +278,19 @@ async function clickButton(page, text, timeout = 30000) {
           await target.button.click({ timeout: 5000 });
           return;
         } catch (_) {
-        await target.button.click({ force: true, timeout: 5000 });
-        return;
+          await target.button.click({ force: true, timeout: 5000 });
+          return;
+        }
       }
     }
+    await page.waitForTimeout(500);
   }
-  await page.waitForTimeout(500);
-}
-throw new Error(`No se pudo encontrar el botón "${text}" después de ${timeout} ms.`);
+  throw new Error(`No se pudo encontrar el botón "${text}" después de ${timeout} ms.`);
 }
 
 async function waitForTextOrButton(page, texts, buttons, timeout = TIMEOUT) {
   const start = Date.now();
   while (Date.now() - start < timeout) {
-
-
-
     const frames = page.frames();
     for (const frame of frames) {
       if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
@@ -302,285 +298,322 @@ async function waitForTextOrButton(page, texts, buttons, timeout = TIMEOUT) {
           if (await frame.getByText(text).first().isVisible().catch(() => false)) {
             return { type: 'text', value: text };
           }
-        }
-        for (const button of buttons) {
-          if (await frame.getByRole('button', { name: button }).first().isVisible().catch(() => false)) {
-            return { type: 'button', value: button };
-          }
-        }
-      }
-    }
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-  throw new Error('No apareció ninguna condición esperada en los plazos definidos.');
+
+
+
+Usa el código con precaución.
+
+}
+for (const button of buttons) {
+if (await frame.getByRole('button', { name: button }).first().isVisible().catch(() => false)) {
+return { type: 'button', value: button };
+}
+}
+}
+}
+await new Promise(resolve => setTimeout(resolve, 500));
+}
+throw new Error('No apareció ninguna condición esperada en los plazos definidos.');
 }
 
-
-
 /*
-• CAMBIAR VIDEO EXCLUSIVAMENTE EN EL IFRAME DE PERSONA
+
+-
+
+---
+
+1. CAMBIAR VIDEO EXCLUSIVAMENTE EN EL IFRAME DE PERSONA
+2.
+
+---
+
 */
 async function setCameraVideo(page, filename) {
-  const url = `http://127.0.0.1:${PORT}/${filename}`;
-  console.log(`📷 Cambiando cámara a ${filename} SOLO en Persona...`);
+const url = `http://127.0.0.1:${PORT}/${filename}`;
+console.log(`📷 Cambiando cámara a ${filename} SOLO en Persona...`);
 
-  const frames = page.frames();
-  let cambiadoEnIframe = false;
+const frames = page.frames();
+let cambiadoEnIframe = false;
 
-  for (const frame of frames) {
-    const frameUrl = frame.url();
-    if (frameUrl.includes('withpersona.com') || frameUrl.includes('inquiry')) {
-      try {
-        // No ocultamos errores con catch vacíos para ver reportes reales de descodificación en CI
-        const result = await frame.evaluate(async (videoUrl) => {
-          if (typeof window.__setCameraVideo === 'function') {
-            return await window.__setCameraVideo(videoUrl);
-          }
-          return { error: 'El script de la cámara virtual no está presente en este frame.' };
-        }, url);
+for (const frame of frames) {
+const frameUrl = frame.url();
+if (frameUrl.includes('withpersona.com') || frameUrl.includes('inquiry')) {
+try {
+const result = await frame.evaluate(async (videoUrl) => {
+if (typeof window.__setCameraVideo === 'function') {
+return await window.__setCameraVideo(videoUrl);
+}
+return { error: 'El script de la cámara virtual no está presente en este frame.' };
+}, url);
 
-        if (result && result.ok) {
-          console.log(`✅ Cámara cambiada de forma verificada DENTRO del iframe. Dimensiones: ${result.width}x${result.height}`);
-          cambiadoEnIframe = true;
-        } else if (result && result.error) {
-        console.error(`❌ Error en evaluación de Frame: ${result.error}`);
-      }
-    } catch (err) {
-    console.error(`❌ Error fatal inyectando vídeo en el iframe: ${err.message}`);
-  }
+if (result && result.ok) {
+console.log(`✅ Cámara cambiada en iframe de Persona de forma estable.`);
+cambiadoEnIframe = true;
+}
+} catch (err) {
+console.error(`❌ Error inyectando vídeo en el iframe: ${err.message}`);
+}
 }
 }
 
 if (!cambiadoEnIframe) {
-  console.log(`⏳ Esperando propagación de frames multimedia en el canvas...`);
-  await page.waitForTimeout(1500);
+console.log(`⏳ Esperando sincronización de frames multimedia en el canvas...`);
+await page.waitForTimeout(1500);
 }
 }
-
 
 /*
-• CAMBIAR IDIOMA ROBLOX
+
+-
+
+---
+
+1. CAMBIAR IDIOMA ROBLOX
+2.
+
+---
+
 */
 async function changeLanguage(page) {
-  console.log('➡️ Abriendo página de cuenta...');
-  await page.goto(ACCOUNT_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await wait(3000);
+console.log('➡️ Abriendo página de cuenta...');
+await page.goto(ACCOUNT_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+await wait(3000);
 
-  if (page.url().includes('/login')) {
-    throw new Error('La cookie .ROBLOSECURITY parece inválida o expiró.');
-  }
+if (page.url().includes('/login')) {
+throw new Error('La cookie .ROBLOSECURITY parece inválida o expiró.');
+}
 
-  const nativeSelect = page.locator('select').filter({ hasText: 'Español' }).first();
-  if (await nativeSelect.count() > 0) {
-    await nativeSelect.selectOption({ label: TARGET_LANGUAGE_LABEL });
-  } else {
-  const dropdown = page.locator('[class\*="language"] button, [class\*="Language"] button, [data-testid\*="language"]').first();
-  await dropdown.click({ timeout: 10000 });
-  await wait(1000);
-  await page.getByText(TARGET_LANGUAGE_LABEL, { exact: true }).first().click({ timeout: 10000 });
+const nativeSelect = page.locator('select').filter({ hasText: 'Español' }).first();
+if (await nativeSelect.count() > 0) {
+await nativeSelect.selectOption({ label: TARGET_LANGUAGE_LABEL });
+} else {
+const dropdown = page.locator('[class*="language"] button, [class*="Language"] button, [data-testid*="language"]').first();
+await dropdown.click({ timeout: 10000 });
+await wait(1000);
+await page.getByText(TARGET_LANGUAGE_LABEL, { exact: true }).first().click({ timeout: 10000 });
 }
 console.log('✅ Idioma cambiado.');
 await wait(2000);
 }
 
-
-
 /*
-• FLUJO PRINCIPAL DE VERIFICACIÓN
+
+-
+
+---
+
+1. FLUJO PRINCIPAL DE VERIFICACIÓN
+2.
+
+---
+
 */
-
 async function runGameFlow(page) {
-  console.log('➡️ Abriendo Build the Pyramid...');
-  await page.goto(GAME_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await wait(5000);
+console.log('➡️ Abriendo Build the Pyramid...');
+await page.goto(GAME_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+await wait(5000);
 
-  await clickButton(page, 'Continuar con la cámara', 30000);
-  await page.waitForTimeout(1000);
+await clickButton(page, 'Continuar con la cámara', 30000);
+await page.waitForTimeout(1000);
 
-  await clickButton(page, 'Continuar', 30000);
-  await page.waitForTimeout(1000);
+await clickButton(page, 'Continuar', 30000);
+await page.waitForTimeout(1000);
 
-  console.log('➡️ Buscando segundo Continuar...');
-  await clickButton(page, 'Continuar', 30000);
+console.log('➡️ Buscando segundo Continuar...');
+await clickButton(page, 'Continuar', 30000);
 
-  console.log('⏳ Esperando a que aparezca "Centra tu rostro en el círculo"...');
-  const TEXTO_CAMARA = 'Centra tu rostro en el círculo';
-  let iframePersona = null;
-  const deadline = Date.now() + 30000;
+console.log('⏳ Esperando a que aparezca "Centra tu rostro en el círculo"...');
+const TEXTO_CAMARA = 'Centra tu rostro en el círculo';
+let iframePersona = null;
+const deadline = Date.now() + 30000;
 
-  while (Date.now() < deadline) {
-    const frames = page.frames();
-    for (const frame of frames) {
-      if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
-        const visible = await frame.getByText(TEXTO_CAMARA).first().isVisible().catch(() => false);
-        if (visible) {
-          iframePersona = frame;
-          break;
-        }
-      }
-    }
-    if (iframePersona) break;
-    await page.waitForTimeout(500);
-  }
-
-  if (!iframePersona) {
-    throw new Error('No se encontró la interfaz inicial de la cámara de Persona.');
-  }
-
-  // FIJACIÓN EXCLUSIVA: Inyectamos el script ÚNICAMENTE en el iframe activo de Persona
-  console.log('📷 Inyectando la cámara virtual EXCLUSIVAMENTE en el iframe de Persona...');
-  await iframePersona.evaluate(`(${CAMERA_INIT_SCRIPT.toString()})();`);
-  await page.waitForTimeout(1000);
-
-  const botonCerrarQR = iframePersona.locator('button[aria-label\*="Cerrar"], button[class\*="close"], [role="dialog"] button');
-  if (await botonCerrarQR.first().isVisible().catch(() => false)) {
-    console.log('⚠️ Alerta de código QR detectada. Forzando cierre del diálogo...');
-    await botonCerrarQR.first().click().catch(() => {});
-  }
-
-
-
-  /*
-   * ----------------------------------------------------------
-   * VIDEO 1: Rostro de Frente
-   * ----------------------------------------------------------
-   */
-  await setCameraVideo(page, 'video1.mp4');
-  await page.screenshot({ path: 'video1-status.png', fullPage: true });
-
-  // Damos 4 segundos para que el motor de Persona analice el video de frente antes de disparar el clic
-  console.log('⏳ Sincronizando: Esperando que Persona procese el Rostro de Frente...');
-  await page.waitForTimeout(4000);
-
-  console.log('⏳ Esperando acción de captura inicial...');
-  await waitForTextOrButton(page, ['izquierda', 'Gira', 'Mirar'], ['Toma una foto'], 60000);
-  await clickButton(page, 'Toma una foto', 5000).catch(() => {});
-
-  /*
-   * ----------------------------------------------------------
-   * VIDEO 2: Rostro de Perfil Izquierdo
-   * ----------------------------------------------------------
-   */
-  await page.waitForTimeout(2000);
-  await setCameraVideo(page, 'video2.mp4');
-  await page.screenshot({ path: 'video2-status.png', fullPage: true });
-
-  // Damos 4 segundos para que Persona registre el cambio de perfil
-  console.log('⏳ Sincronizando: Esperando que Persona procese el Perfil Izquierdo...');
-  await page.waitForTimeout(4000);
-
-  console.log('⏳ Esperando validación de perfil izquierdo...');
-  await waitForTextOrButton(page, ['derecha', 'Gira la cara'], ['Toma una foto'], 60000);
-  await clickButton(page, 'Toma una foto', 5000).catch(() => {});
-
-  /*
-   * ----------------------------------------------------------
-   * VIDEO 3: Finalización del Flujo
-   * ----------------------------------------------------------
-   */
-  await page.waitForTimeout(2000);
-  await setCameraVideo(page, 'video3.mp4');
-  await page.screenshot({ path: 'video3-status.png', fullPage: true });
-
-  // Espera final para el último procesamiento biométrico
-  console.log('⏳ Sincronizando: Esperando procesamiento final de verificación...');
-  await page.waitForTimeout(4000);
-
-  console.log('⏳ Esperando pantalla final de éxito...');
-  await waitForTextOrButton(page, ['Procesando', 'Completado', 'Éxito', 'Validando'], ['Esta bien', 'Toma una foto'], 60000);
-
-  // Intentamos presionar "Esta bien" de forma controlada; si no aparece, evitamos pulsar botones aleatorios
-  try {
-    await clickButton(page, 'Esta bien', 8000);
-  } catch (_) {
-    console.log('ℹ️ El botón "Esta bien" no apareció o el flujo cerró automáticamente el modal de Persona.');
-  }
-
-  console.log('🎉 Flujo completado de forma segura.');
-  await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
+while (Date.now() < deadline) {
+const frames = page.frames();
+for (const frame of frames) {
+if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
+const visible = await frame.getByText(TEXTO_CAMARA).first().isVisible().catch(() => false);
+if (visible) {
+iframePersona = frame;
+break;
+}
+}
+}
+if (iframePersona) break;
+await page.waitForTimeout(500);
 }
 
+if (!iframePersona) {
+throw new Error('No se encontró la interfaz inicial de la cámara de Persona.');
+}
+
+// ELIMINADO EL BLOQUE EL BOTÓN DE CIERRE DEL QR QUE CAUSABA EL DIÁLOGO DE CANCELACIÓN EN ROBLOX
 
 /*
-• MAIN
+
+-
+
+---
+
+1. VIDEO 1: Rostro de Frente
+2.
+
+---
+
 */
+await setCameraVideo(page, 'video1.mp4');
+await page.screenshot({ path: 'video1-status.png', fullPage: true });
 
+console.log('⏳ Sincronizando: Esperando que Persona procese el Rostro de Frente...');
+await page.waitForTimeout(4000);
+
+console.log('⏳ Esperando acción de captura inicial...');
+await waitForTextOrButton(page, ['izquierda', 'Gira', 'Mirar'], ['Toma una foto'], 60000);
+await clickButton(page, 'Toma una foto', 5000).catch(() => {});
+
+/*
+
+-
+
+---
+
+1. VIDEO 2: Rostro de Perfil Izquierdo
+2.
+
+---
+
+*/
+await page.waitForTimeout(2000);
+await setCameraVideo(page, 'video2.mp4');
+await page.screenshot({ path: 'video2-status.png', fullPage: true });
+
+console.log('⏳ Sincronizando: Esperando que Persona procese el Perfil Izquierdo...');
+await page.waitForTimeout(4000);
+
+console.log('⏳ Esperando validación de perfil izquierdo...');
+await waitForTextOrButton(page, ['derecha', 'Gira la cara'], ['Toma una foto'], 60000);
+await clickButton(page, 'Toma una foto', 5000).catch(() => {});
+
+/*
+
+-
+
+---
+
+1. VIDEO 3: Finalización del Flujo
+2.
+
+---
+
+*/
+await page.waitForTimeout(2000);
+await setCameraVideo(page, 'video3.mp4');
+await page.screenshot({ path: 'video3-status.png', fullPage: true });
+
+console.log('⏳ Sincronizando: Esperando procesamiento final de verificación...');
+await page.waitForTimeout(4000);
+
+console.log('⏳ Esperando pantalla final de éxito...');
+await waitForTextOrButton(page, ['Procesando', 'Completado', 'Éxito', 'Validando'], ['Esta bien', 'Toma una foto'], 60000);
+
+try {
+await clickButton(page, 'Esta bien', 8000);
+} catch (\_) {
+console.log('ℹ️ El botón "Esta bien" no apareció o el flujo cerró automáticamente el modal.');
+}
+
+console.log('🎉 Flujo completado de forma segura.');
+await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
+}
+
+/*
+
+-
+
+---
+
+1. MAIN
+2.
+
+---
+
+*/
 async function main() {
-  console.log('🚀 Iniciando automatización...');
-  const cookie = process.env.ROBLOSECURITY;
+console.log('🚀 Iniciando automatización...');
+const cookie = process.env.ROBLOSECURITY;
 
-  if (!cookie) {
-    throw new Error('No existe el secret ROBLOSECURITY.');
-  }
+if (!cookie) {
+throw new Error('No existe el secret ROBLOSECURITY.');
+}
 
-  for (const [name, file] of Object.entries(VIDEOS)) {
-    if (!fs.existsSync(file)) throw new Error(`No existe ${name}: ${file}`);
-  }
+for (const [name, file] of Object.entries(VIDEOS)) {
+if (!fs.existsSync(file)) throw new Error(`No existe ${name}: ${file}`);
+}
 
-  const server = await startVideoServer();
-  let browser = null;
+const server = await startVideoServer();
+let browser = null;
 
-  try {
-    browser = await chromium.launch({
-      headless: true,
-      args: [
-      '--use-fake-ui-for-media-stream',
-      '--use-fake-device-for-media-stream',
-      '--autoplay-policy=no-user-gesture-required',
-      '--disable-dev-shm-usage',
-      '--disable-web-security',
-      '--allow-running-insecure-content'
-      ]
-    });
+try {
+browser = await chromium.launch({
+headless: true,
+args: [
+'--use-fake-ui-for-media-stream',
+'--use-fake-device-for-media-stream',
+'--autoplay-policy=no-user-gesture-required',
+'--disable-dev-shm-usage',
+'--disable-web-security',
+'--allow-running-insecure-content'
+]
+});
 
-    const context = await browser.newContext({
-      locale: 'es-ES',
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      permissions: ['camera']
-    });
+const context = await browser.newContext({
+locale: 'es-ES',
+userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+permissions: ['camera']
+});
 
-    await context.grantPermissions(['camera'], { origin: 'https://www.roblox.com' });
-    await context.addCookies([
-    { name: '.ROBLOSECURITY', value: cookie, domain: '.roblox.com', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }
-    ]);
+await context.grantPermissions(['camera'], { origin: 'https://www.roblox.com' });
+await context.addCookies([
+{ name: '.ROBLOSECURITY', value: cookie, domain: '.roblox.com', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }
+]);
 
-    const page = await context.newPage();
+// INYECCIÓN COMPLETA ANTICIPADA: Inyectamos el script ANTES de realizar cualquier navegación
+await context.addInitScript({ content: `(${CAMERA_INIT_SCRIPT.toString()})();` });
 
-    // Bypass definitivo de restricciones de frames
-    await page.route('**/*', async route => {
-      try {
-        const response = await route.fetch();
-        const headers = response.headers();
-        delete headers['x-frame-options'];
-        delete headers['content-security-policy'];
-        await route.fulfill({ response, headers });
-      } catch (err) {
-      await route.continue().catch(() => {});
-    }
-  });
+const page = await context.newPage();
 
-  page.on('console', message => {
-    // Capturamos todos los logs informativos y de error provenientes del código interno de la cámara virtual
-    console.log(`🌐 [Navegador] ${message.type()}: ${message.text()}`);
-  });
+await page.route('**/*', async route => {
+try {
+const response = await route.fetch();
+const headers = response.headers();
+delete headers['x-frame-options'];
+delete headers['content-security-policy'];
+await route.fulfill({ response, headers });
+} catch (err) {
+await route.continue().catch(() => {});
+}
+});
 
-  await changeLanguage(page);
-  await runGameFlow(page);
+page.on('console', message => {
+console.log(`🌐 [Navegador] ${message.type()}: ${message.text()}`);
+});
 
-  console.log('=================================\n🎉 AUTOMATIZACIÓN TERMINADA\n=================================');
+await changeLanguage(page);
+await runGameFlow(page);
+
+console.log('=================================\n🎉 AUTOMATIZACIÓN TERMINADA\n=================================');
 } catch (error) {
 console.error('=================================\n❌ AUTOMATIZACIÓN FALLÓ\n=================================');
 console.error(error.stack || error.message);
 
 if (browser) {
-  try {
-    const pages = browser.contexts()[0]?.pages();
-    if (pages && pages.length > 0) {
-      await pages[0].screenshot({ path: 'error-screenshot.png', fullPage: true });
-      fs.writeFileSync('error-page.html', await pages[0].content());
-    }
-  } catch (cErr) {
-  console.error('⚠️ Error generando archivos debug:', cErr.message);
+try {
+const pages = browser.contexts()[0]?.pages();
+if (pages && pages.length > 0) {
+await pages[0].screenshot({ path: 'error-screenshot.png', fullPage: true });
+fs.writeFileSync('error-page.html', await pages[0].content());
+}
+} catch (cErr) {
+console.error('⚠️ Error generando archivos debug:', cErr.message);
 }
 }
 process.exitCode = 1;
@@ -592,6 +625,6 @@ console.log('🛑 Servidor de vídeos detenido.');
 }
 
 main().catch(error => {
-  console.error('❌ Error fatal:', error);
-  process.exit(1);
+console.error('❌ Error fatal:', error);
+process.exit(1);
 });
