@@ -515,7 +515,7 @@ await waitForTextOrButton(page, ['Procesando', 'Completado', 'Éxito', 'Validand
 
 try {
 await clickButton(page, 'Esta bien', 8000);
-} catch (\_) {
+} catch (_) {
 console.log('ℹ️ El botón "Esta bien" no apareció o el flujo cerró automáticamente el modal.');
 }
 
