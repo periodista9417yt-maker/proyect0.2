@@ -521,13 +521,13 @@ await setCameraVideo(page, 'video3.mp4');
 
 console.log('⏳ Sincronizando: Esperando procesamiento final de verificación...');
 await page.waitForTimeout(1000);
-
+await page.screenshot({ path: 'video3-status.png', fullPage: true });
 console.log('⏳ Esperando pantalla final de éxito...');
-await waitForTextOrButton(page, ['Procesando', 'Completado', 'Éxito', 'Validando'], ['Esta bien', 'Toma una foto'], 60000);
+await waitForTextOrButton(page, ['Procesando', 'Completado', 'Estimando', 'Validando'], ['Continuar', 'Toma una foto'], 60000);
 
 // ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DE CONFIRMAR LA SALIDA ↓↓↓
 await page.waitForTimeout(2000);
-    await page.screenshot({ path: 'video3-status.png', fullPage: true });
+    
 
 try {
 await clickButton(page, 'Toma una foto', 8000);
