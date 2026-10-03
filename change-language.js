@@ -463,7 +463,7 @@ throw new Error('No se encontró la interfaz inicial de la cámara de Persona.')
 
 */
 await setCameraVideo(page, 'video1.mp4');
-  await page.waitForTimeout(4000);
+  await page.waitForTimeout(1000);
 
 console.log('⏳ Sincronizando: Esperando que Persona procese el Rostro de Frente...');
 
@@ -489,7 +489,7 @@ await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 ---
 
 */
-await page.waitForTimeout(1000);
+await page.waitForTimeout(500);
 await setCameraVideo(page, 'video2.mp4');
 
 console.log('⏳ Sincronizando: Esperando que Persona procese el Perfil Izquierdo...');
@@ -516,7 +516,7 @@ await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 ---
 
 */
-await page.waitForTimeout(1000);
+await page.waitForTimeout(500);
 await setCameraVideo(page, 'video3.mp4');
 
 console.log('⏳ Sincronizando: Esperando procesamiento final de verificación...');
@@ -536,7 +536,7 @@ console.log('ℹ️ El botón "Toma una foto" no apareció o el flujo cerró aut
 }
 
 console.log('🎉 Flujo completado de forma segura.');
-  await page.waitForTimeout(5500);
+  await page.waitForTimeout(10000);
 await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
 }
 
