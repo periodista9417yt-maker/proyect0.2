@@ -469,7 +469,7 @@ console.log('⏳ Sincronizando: Esperando que Persona procese el Rostro de Frent
 
 
 console.log('⏳ Esperando acción de captura inicial...');
-await waitForTextOrButton(page, ['izquierda', 'agrefa', 'Mirar'], ['Toma una foto'], 60000);
+await waitForTextOrButton(page, ['izquierda', 'agrefa', 'ere'], ['Toma una foto'], 60000);
 
 // ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DEL CLIC ↓↓↓
 await page.waitForTimeout(1500);
@@ -489,11 +489,11 @@ await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 ---
 
 */
-await page.waitForTimeout(500);
+await page.waitForTimeout(1000);
 await setCameraVideo(page, 'video2.mp4');
 
 console.log('⏳ Sincronizando: Esperando que Persona procese el Perfil Izquierdo...');
-await page.waitForTimeout(1000);
+await page.waitForTimeout(2000);
 
 console.log('⏳ Esperando validación de perfil izquierdo...');
 await waitForTextOrButton(page, ['derecha', 'agrefa'], ['Toma una foto'], 60000);
@@ -516,11 +516,11 @@ await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 ---
 
 */
-await page.waitForTimeout(500);
+await page.waitForTimeout(1000);
 await setCameraVideo(page, 'video3.mp4');
 
 console.log('⏳ Sincronizando: Esperando procesamiento final de verificación...');
-await page.waitForTimeout(1000);
+await page.waitForTimeout(2000);
 await page.screenshot({ path: 'video3-status.png', fullPage: true });
 console.log('⏳ Esperando pantalla final de éxito...');
 await waitForTextOrButton(page, ['Procesando', 'Completado', 'Estimando', 'Validando'], ['Continuar', 'Toma una foto'], 60000);
@@ -536,7 +536,7 @@ console.log('ℹ️ El botón "Toma una foto" no apareció o el flujo cerró aut
 }
 
 console.log('🎉 Flujo completado de forma segura.');
-  await page.waitForTimeout(10000);
+  await page.waitForTimeout(8000);
 await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
 }
 
