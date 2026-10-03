@@ -463,16 +463,18 @@ throw new Error('No se encontró la interfaz inicial de la cámara de Persona.')
 
 */
 await setCameraVideo(page, 'video1.mp4');
-await page.screenshot({ path: 'video1-status.png', fullPage: true });
+  await page.waitForTimeout(4000);
 
 console.log('⏳ Sincronizando: Esperando que Persona procese el Rostro de Frente...');
-await page.waitForTimeout(4000);
+
 
 console.log('⏳ Esperando acción de captura inicial...');
 await waitForTextOrButton(page, ['izquierda', 'Gira', 'Mirar'], ['Toma una foto'], 60000);
 
 // ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DEL CLIC ↓↓↓
 await page.waitForTimeout(1500);
+  await page.screenshot({ path: 'video1-status.png', fullPage: true });
+
 await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 
 /*
@@ -487,18 +489,19 @@ await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 ---
 
 */
-await page.waitForTimeout(2000);
+await page.waitForTimeout(1000);
 await setCameraVideo(page, 'video2.mp4');
-await page.screenshot({ path: 'video2-status.png', fullPage: true });
 
 console.log('⏳ Sincronizando: Esperando que Persona procese el Perfil Izquierdo...');
-await page.waitForTimeout(4000);
+await page.waitForTimeout(1000);
 
 console.log('⏳ Esperando validación de perfil izquierdo...');
 await waitForTextOrButton(page, ['derecha', 'Gira la cara'], ['Toma una foto'], 60000);
 
 // ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DEL CLIC ↓↓↓
 await page.waitForTimeout(1500);
+  await page.screenshot({ path: 'video2-status.png', fullPage: true });
+
 await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 
 /*
@@ -513,18 +516,19 @@ await clickButton(page, 'Toma una foto', 5000).catch(() => {});
 ---
 
 */
-await page.waitForTimeout(2000);
+await page.waitForTimeout(1000);
 await setCameraVideo(page, 'video3.mp4');
-await page.screenshot({ path: 'video3-status.png', fullPage: true });
 
 console.log('⏳ Sincronizando: Esperando procesamiento final de verificación...');
-await page.waitForTimeout(4000);
+await page.waitForTimeout(1000);
 
 console.log('⏳ Esperando pantalla final de éxito...');
 await waitForTextOrButton(page, ['Procesando', 'Completado', 'Éxito', 'Validando'], ['Esta bien', 'Toma una foto'], 60000);
 
 // ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DE CONFIRMAR LA SALIDA ↓↓↓
-await page.waitForTimeout(1500);
+await page.waitForTimeout(2000);
+    await page.screenshot({ path: 'video3-status.png', fullPage: true });
+
 try {
 await clickButton(page, 'Toma una foto', 8000);
 } catch (_) {
@@ -532,6 +536,7 @@ console.log('ℹ️ El botón "Toma una foto" no apareció o el flujo cerró aut
 }
 
 console.log('🎉 Flujo completado de forma segura.');
+  await page.waitForTimeout(5500);
 await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
 }
 
