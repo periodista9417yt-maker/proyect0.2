@@ -469,7 +469,7 @@ console.log('⏳ Sincronizando: Esperando que Persona procese el Rostro de Frent
 
 
 console.log('⏳ Esperando acción de captura inicial...');
-await waitForTextOrButton(page, ['izquierda', 'Gira', 'Mirar'], ['Toma una foto'], 60000);
+await waitForTextOrButton(page, ['izquierda', 'agrefa', 'Mirar'], ['Toma una foto'], 60000);
 
 // ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DEL CLIC ↓↓↓
 await page.waitForTimeout(1500);
@@ -496,7 +496,7 @@ console.log('⏳ Sincronizando: Esperando que Persona procese el Perfil Izquierd
 await page.waitForTimeout(1000);
 
 console.log('⏳ Esperando validación de perfil izquierdo...');
-await waitForTextOrButton(page, ['derecha', 'Gira la cara'], ['Toma una foto'], 60000);
+await waitForTextOrButton(page, ['derecha', 'agrefa'], ['Toma una foto'], 60000);
 
 // ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DEL CLIC ↓↓↓
 await page.waitForTimeout(1500);
