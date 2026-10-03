@@ -102,8 +102,8 @@ const CAMERA_INIT_SCRIPT = () => {
     if (ready) return fakeStream;
 
     canvas = document.createElement('canvas');
-    canvas.width = 1280;
-    canvas.height = 720;
+    canvas.width = 720;
+    canvas.height = 1280;
     ctx = canvas.getContext('2d', { alpha: false });
 
     video = document.createElement('video');
