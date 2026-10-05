@@ -103,8 +103,8 @@ const CAMERA_INIT_SCRIPT = () => {
     if (ready) return fakeStream;
 
     canvas = document.createElement('canvas');
-    canvas.width = 1280;
-    canvas.height = 720;
+    canvas.width = 720;
+    canvas.height = 1280;
     ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true }); // Optimizamos lectura frecuente para el ruido
 
     video = document.createElement('video');
@@ -257,7 +257,7 @@ const CAMERA_INIT_SCRIPT = () => {
     }
     return originalGetUserMedia(constraints);
   };
-};
+
 
 /*
  * ------------------------------------------------------------
