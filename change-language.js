@@ -249,16 +249,6 @@ const CAMERA_INIT_SCRIPT = () => {
   };
 };
 
-
-
-  navigator.mediaDevices.getUserMedia = async function(constraints) {
-    if (constraints && constraints.video) {
-      return createCamera();
-    }
-    return originalGetUserMedia(constraints);
-  };
-
-
 /*
  * ------------------------------------------------------------
  * UTILIDADES DE BÚSQUEDA Y ESPERA
