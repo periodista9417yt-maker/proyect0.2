@@ -540,6 +540,7 @@ async function runGameFlow(page) {
   } catch (_) {
     console.log('ℹ️ El botón "Esta bien" no apareció o el flujo cerró automáticamente el modal.');
   }
+  await page.waitForTimeout(8000);
 
   console.log('🎉 Flujo completado de forma segura.');
   await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
