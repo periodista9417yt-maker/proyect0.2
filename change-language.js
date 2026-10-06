@@ -4,8 +4,8 @@ const http = require('http');
 const path = require('path');
 
 const TARGET_LANGUAGE_LABEL = 'Español (España)';
-const ACCOUNT_URL = 'https://www.roblox.com/es/my/account#!/info';
-const GAME_URL = 'https://www.roblox.com/es/my/account#!/info';
+const ACCOUNT_URL = 'https://roblox.com';
+const GAME_URL = 'https://roblox.com';
 
 const VIDEOS = {
   video1: path.resolve('videos/video1.mp4'),
@@ -84,10 +84,9 @@ function startVideoServer() {
   });
 }
 
-
 /*
  * ------------------------------------------------------------
- * CÁMARA VIRTUAL - SCRIPT DE INYECCIÓN GLOBAL (BYPASS DE LIVENESS DETECTION)
+ * CÁMARA VIRTUAL - SCRIPT DE INYECCIÓN GLOBAL (MODO EN VIVO)
  * ------------------------------------------------------------
  */
 const CAMERA_INIT_SCRIPT = () => {
@@ -103,9 +102,9 @@ const CAMERA_INIT_SCRIPT = () => {
     if (ready) return fakeStream;
 
     canvas = document.createElement('canvas');
-    canvas.width = 720;
-    canvas.height = 1280;
-    ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true }); // Optimizamos lectura frecuente para el ruido
+    canvas.width = 1280;
+    canvas.height = 720;
+    ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
 
     video = document.createElement('video');
     video.muted = true;
@@ -128,35 +127,26 @@ const CAMERA_INIT_SCRIPT = () => {
     ctx.fillStyle = '#1e1e24';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    /*
-     * BUCLE DE RENDERIZADO CON GENERACIÓN DE RUIDO EN VIVO
-     */
     function render() {
       if (video && video.readyState >= 2) {
         try {
-          // 1. Dibujamos el frame del vídeo normal
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          // 2. SISTEMA EN VIVO: Extraemos una porción del canvas para inyectar ruido digital aleatorio
-          // Esto rompe los patrones fijos de compresión que detectan los algoritmos anti-fraude de Persona
           const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const data = imgData.data;
           
-          // Generamos una semilla aleatoria de ruido microscópico por fotograma (micro-variación de luz)
-          const noiseIntensity = 1.5; // Intensidad sutil que la IA detecta como sensor físico, pero el ojo humano no ve
-          for (let i = 0; i < data.length; i += 16) { // Procesamos en saltos para no sobrecargar el hilo de CPU en CI
+          const noiseIntensity = 1.5; 
+          for (let i = 0; i < data.length; i += 16) { 
             const noise = (Math.random() - 0.5) * noiseIntensity;
-            data[i]     = Math.min(255, Math.max(0, data[i] + noise));     // R
-            data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise)); // G
-            data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise)); // B
+            data[i]     = Math.min(255, Math.max(0, data[i] + noise));     
+            data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise)); 
+            data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise)); 
           }
           ctx.putImageData(imgData, 0, 0);
 
         } catch (_) {}
       }
       
-      // 3. Jitter temporal: Alteramos aleatoriamente la sincronización por milisegundos 
-      // Esto simula los micro-retrasos de transferencia de hardware que ocurren en cables USB/cámaras reales
       const jitterDelay = Math.random() > 0.85 ? Math.random() * 3 : 0;
       if (jitterDelay > 0) {
         setTimeout(() => { requestAnimationFrame(render); }, jitterDelay);
@@ -209,11 +199,7 @@ const CAMERA_INIT_SCRIPT = () => {
                   sum += r + g + b;
                 }
                 
-                console.log('🎥 Canvas diagnóstico de píxeles activos:', {
-                  min,
-                  max,
-                  average: sum / (image.data.length / 4) / 3
-                });
+                console.log('🎥 Canvas diagnóstico de píxeles activos:', { min, max, average: sum / (image.data.length / 4) / 3 });
               } catch (e) {
                 console.error('⚠️ No se pudo leer ImageData:', e.message);
               }
@@ -233,7 +219,7 @@ const CAMERA_INIT_SCRIPT = () => {
 
         video.onerror = () => {
           const error = video.error;
-          reject(new Error(`Error de descodificación de vídeo: ${error ? error.message : 'Formato no soportado o Demuxer bloqueado'}`));
+          reject(new Error(`Error de descodificación de vídeo: ${error ? error.message : 'Formato no soportado'}`));
         };
       } catch (error) {
         reject(error);
@@ -308,31 +294,29 @@ async function clickButton(page, text, timeout = 30000) {
       candidates.sort((a, b) => b.y - a.y);
       const target = candidates[0];
       if (!target.disabled) {
-        await target.button.scrollIntoViewIfNeeded().catch(() => {});
-        try {
-          await target.button.click({ timeout: 5000 });
-          return;
-        } catch (_) {
-          await target.button.click({ force: true, timeout: 5000 });
-          return;
-        }
-      }
-    }
-    await page.waitForTimeout(500);
-  }
-  throw new Error(`No se pudo encontrar el botón "${text}" después de ${timeout} ms.`);
+
+
+      await target.button.scrollIntoViewIfNeeded().catch(() => {});
+try {
+await target.button.click({ timeout: 5000 });
+return;
+} catch (_) {
+await target.button.click({ force: true, timeout: 5000 });
+return;
 }
-
+}
+}
+await page.waitForTimeout(500);
+}
+throw new Error(No se pudo encontrar el botón "${text}" después de ${timeout} ms.);
+}
 async function waitForTextOrButton(page, texts, buttons, timeout = TIMEOUT) {
-  const start = Date.now();
-  while (Date.now() - start < timeout) {
-    const frames = page.frames();
-    for (const frame of frames) {
-      if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
-        for (const text of texts) {
-
-
-
+const start = Date.now();
+while (Date.now() - start < timeout) {
+const frames = page.frames();
+for (const frame of frames) {
+if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
+for (const text of texts) {
 if (await frame.getByText(text).first().isVisible().catch(() => false)) {
 return { type: 'text', value: text };
 }
@@ -348,26 +332,14 @@ await new Promise(resolve => setTimeout(resolve, 500));
 }
 throw new Error('No apareció ninguna condición esperada en los plazos definidos.');
 }
-
 /*
-
--
-
----
-
-1. CAMBIAR VIDEO EXCLUSIVAMENTE EN EL IFRAME DE PERSONA
-2.
-
----
-
+• CAMBIAR VIDEO EXCLUSIVAMENTE EN EL IFRAME DE PERSONA
 */
 async function setCameraVideo(page, filename) {
-const url = `http://127.0.0.1:${PORT}/${filename}`;
-console.log(`📷 Cambiando cámara a ${filename} SOLO en Persona...`);
-
+const url = http://127.0.0.1:${PORT}/${filename};
+console.log(📷 Cambiando cámara a ${filename} SOLO en Persona...);
 const frames = page.frames();
 let cambiadoEnIframe = false;
-
 for (const frame of frames) {
 const frameUrl = frame.url();
 if (frameUrl.includes('withpersona.com') || frameUrl.includes('inquiry')) {
@@ -378,44 +350,30 @@ return await window.__setCameraVideo(videoUrl);
 }
 return { error: 'El script de la cámara virtual no está presente en este frame.' };
 }, url);
-
 if (result && result.ok) {
-console.log(`✅ Cámara cambiada en iframe de Persona de forma estable.`);
+console.log(✅ Cámara cambiada en iframe de Persona de forma estable.);
 cambiadoEnIframe = true;
 }
 } catch (err) {
-console.error(`❌ Error inyectando vídeo en el iframe: ${err.message}`);
+console.error(❌ Error inyectando vídeo en el iframe: ${err.message});
 }
 }
 }
-
 if (!cambiadoEnIframe) {
-console.log(`⏳ Esperando sincronización de frames multimedia en el canvas...`);
+console.log(⏳ Esperando sincronización de frames multimedia en el canvas...);
 await page.waitForTimeout(1500);
 }
 }
-
 /*
-
--
-
----
-
-1. CAMBIAR IDIOMA ROBLOX
-2.
-
----
-
+• CAMBIAR IDIOMA ROBLOX
 */
 async function changeLanguage(page) {
 console.log('➡️ Abriendo página de cuenta...');
 await page.goto(ACCOUNT_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 await wait(3000);
-
 if (page.url().includes('/login')) {
 throw new Error('La cookie .ROBLOSECURITY parece inválida o expiró.');
 }
-
 const nativeSelect = page.locator('select').filter({ hasText: 'Español' }).first();
 if (await nativeSelect.count() > 0) {
 await nativeSelect.selectOption({ label: TARGET_LANGUAGE_LABEL });
@@ -428,38 +386,23 @@ await page.getByText(TARGET_LANGUAGE_LABEL, { exact: true }).first().click({ tim
 console.log('✅ Idioma cambiado.');
 await wait(2000);
 }
-
 /*
-
--
-
----
-
-1. FLUJO PRINCIPAL DE VERIFICACIÓN
-2.
-
----
-
+• FLUJO PRINCIPAL DE VERIFICACIÓN
 */
 async function runGameFlow(page) {
 console.log('➡️ Abriendo Build the Pyramid...');
 await page.goto(GAME_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 await wait(5000);
-
 await clickButton(page, 'Continuar con la cámara', 30000);
 await page.waitForTimeout(1000);
-
 await clickButton(page, 'Continuar', 30000);
 await page.waitForTimeout(1000);
-
 console.log('➡️ Buscando segundo Continuar...');
 await clickButton(page, 'Continuar', 30000);
-
 console.log('⏳ Esperando a que aparezca "Centra tu rostro en el círculo"...');
 const TEXTO_CAMARA = 'Centra tu rostro en el círculo';
 let iframePersona = null;
 const deadline = Date.now() + 30000;
-
 while (Date.now() < deadline) {
 const frames = page.frames();
 for (const frame of frames) {
@@ -474,128 +417,65 @@ break;
 if (iframePersona) break;
 await page.waitForTimeout(500);
 }
-
 if (!iframePersona) {
 throw new Error('No se encontró la interfaz inicial de la cámara de Persona.');
 }
-
 /*
-
--
-
----
-
-1. VIDEO 1: Rostro de Frente
-2.
-
----
-
+• VIDEO 1: Rostro de Frente
 */
 await setCameraVideo(page, 'video1.mp4');
-  await page.waitForTimeout(1000);
-
+await page.screenshot({ path: 'video1-status.png', fullPage: true });
 console.log('⏳ Sincronizando: Esperando que Persona procese el Rostro de Frente...');
-
-
+await page.waitForTimeout(4000);
 console.log('⏳ Esperando acción de captura inicial...');
-await waitForTextOrButton(page, ['izquierda'], ['Toma una foto'], 60000);
-
-// ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DEL CLIC ↓↓↓
+await waitForTextOrButton(page, ['izquierda', 'Gira', 'Mirar'], ['Toma una foto'], 60000);
 await page.waitForTimeout(1500);
-  await page.screenshot({ path: 'video1-status.png', fullPage: true });
-
 await clickButton(page, 'Toma una foto', 5000).catch(() => {});
-
 /*
-
--
-
----
-
-1. VIDEO 2: Rostro de Perfil Izquierdo
-2.
-
----
-
+• VIDEO 2: Rostro de Perfil Izquierdo
 */
 await page.waitForTimeout(2000);
 await setCameraVideo(page, 'video2.mp4');
-  
+await page.screenshot({ path: 'video2-status.png', fullPage: true });
 console.log('⏳ Sincronizando: Esperando que Persona procese el Perfil Izquierdo...');
 await page.waitForTimeout(4000);
-await page.screenshot({ path: 'video2-status.png', fullPage: true });
-
 console.log('⏳ Esperando validación de perfil izquierdo...');
-await waitForTextOrButton(page, ['derecha'], ['Toma una foto'], 60000);
-
-// ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DEL CLIC ↓↓↓
+await waitForTextOrButton(page, ['derecha', 'Gira la cara'], ['Toma una foto'], 60000);
 await page.waitForTimeout(1500);
-
 await clickButton(page, 'Toma una foto', 5000).catch(() => {});
-
 /*
-
--
-
----
-
-1. VIDEO 3: Finalización del Flujo
-2.
-
----
-
+• VIDEO 3: Finalización del Flujo
 */
 await page.waitForTimeout(2000);
 await setCameraVideo(page, 'video3.mp4');
-
+await page.screenshot({ path: 'video3-status.png', fullPage: true });
 console.log('⏳ Sincronizando: Esperando procesamiento final de verificación...');
 await page.waitForTimeout(4000);
-await page.screenshot({ path: 'video3-status.png', fullPage: true });
 console.log('⏳ Esperando pantalla final de éxito...');
-await waitForTextOrButton(page, ['Procesando', 'Completado', 'Estimando', 'Validando'], ['Continuar', 'Toma una foto'], 60000);
-
-// ↓↓↓ NUEVO: ESPERA MÍNIMA DE SEGURIDAD ANTES DE CONFIRMAR LA SALIDA ↓↓↓
-await page.waitForTimeout(2000);
-    
-
+await waitForTextOrButton(page, ['Procesando', 'Completado', 'Éxito', 'Validando'], ['Esta bien', 'Toma una foto'], 60000);
+await page.waitForTimeout(1500);
 try {
-await clickButton(page, 'Toma una foto', 8000);
+await clickButton(page, 'Esta bien', 8000);
 } catch (_) {
-console.log('ℹ️ El botón "Toma una foto" no apareció o el flujo cerró automáticamente el modal.');
+console.log('ℹ️ El botón "Esta bien" no apareció o el flujo cerró automáticamente el modal.');
 }
-
 console.log('🎉 Flujo completado de forma segura.');
-  await page.waitForTimeout(8000);
 await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
 }
-
 /*
-
--
-
----
-
-1. MAIN
-2.
-
----
-
+• MAIN
 */
 async function main() {
 console.log('🚀 Iniciando automatización...');
 const cookie = process.env.ROBLOSECURITY;
-
 if (!cookie) {
 throw new Error('No existe el secret ROBLOSECURITY.');
 }
-
 for (const [name, file] of Object.entries(VIDEOS)) {
-if (!fs.existsSync(file)) throw new Error(`No existe ${name}: ${file}`);
+if (!fs.existsSync(file)) throw new Error(No existe ${name}: ${file});
 }
-
 const server = await startVideoServer();
 let browser = null;
-
 try {
 browser = await chromium.launch({
 headless: true,
@@ -608,22 +488,25 @@ args: [
 '--allow-running-insecure-content'
 ]
 });
-
+// ========================================================
+// MODIFICACIÓN: CONTEXTO CON EMULACIÓN MÓVIL (IPHONE 14 PRO)
+// ========================================================
 const context = await browser.newContext({
+userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+viewport: { width: 393, height: 852 }, // Tamaño de pantalla vertical nativo del iPhone 14 Pro
+deviceScaleFactor: 3,                  // Densidad de píxeles Retina Display
+isMobile: true,                        // Activa flags globales de entorno móvil
+hasTouch: true,                        // Emula eventos táctiles en pantalla (TouchEvents)
 locale: 'es-ES',
-userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
 permissions: ['camera']
 });
-
-await context.grantPermissions(['camera'], { origin: 'https://roblox.com' });
+await context.grantPermissions(['camera'], { origin: 'roblox.com' });
+await context.grantPermissions(['camera'], { origin: 'withpersona.com' }); // Concedemos permisos directos al origen de Persona
 await context.addCookies([
 { name: '.ROBLOSECURITY', value: cookie, domain: '.roblox.com', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }
 ]);
-
-await context.addInitScript({ content: `(${CAMERA_INIT_SCRIPT.toString()})();` });
-
+await context.addInitScript({ content: (${CAMERA_INIT_SCRIPT.toString()})(); });
 const page = await context.newPage();
-
 await page.route('**/*', async route => {
 try {
 const response = await route.fetch();
@@ -635,22 +518,18 @@ await route.fulfill({ response, headers });
 await route.continue().catch(() => {});
 }
 });
-
 page.on('console', message => {
-console.log(`🌐 [Navegador] ${message.type()}: ${message.text()}`);
+console.log(🌐 [Navegador] ${message.type()}: ${message.text()});
 });
-
 await changeLanguage(page);
 await runGameFlow(page);
-
 console.log('=================================\n🎉 AUTOMATIZACIÓN TERMINADA\n=================================');
 } catch (error) {
 console.error('=================================\n❌ AUTOMATIZACIÓN FALLÓ\n=================================');
 console.error(error.stack || error.message);
-
 if (browser) {
 try {
-const pages = browser.contexts()[0]?.pages();
+const pages = browser.contexts()?.pages();
 if (pages && pages.length > 0) {
 await pages[0].screenshot({ path: 'error-screenshot.png', fullPage: true });
 fs.writeFileSync('error-page.html', await pages[0].content());
@@ -666,7 +545,6 @@ server.close();
 console.log('🛑 Servidor de vídeos detenido.');
 }
 }
-
 main().catch(error => {
 console.error('❌ Error fatal:', error);
 process.exit(1);
