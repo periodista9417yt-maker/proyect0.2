@@ -528,7 +528,7 @@ async function runGameFlow(page) {
   await setCameraVideo(page, 'video3.mp4');
 
   console.log('⏳ Sincronizando: Esperando procesamiento final de verificación...');
-  await page.waitForTimeout(4000);
+  await page.waitForTimeout(7000);
   await page.screenshot({ path: 'video3-status.png', fullPage: true });
 
   console.log('⏳ Esperando pantalla final de éxito...');
@@ -540,7 +540,7 @@ async function runGameFlow(page) {
   } catch (_) {
     console.log('ℹ️ El botón "Esta bien" no apareció o el flujo cerró automáticamente el modal.');
   }
-  await page.waitForTimeout(9000);
+  await page.waitForTimeout(5000);
 
   console.log('🎉 Flujo completado de forma segura.');
   await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
