@@ -299,7 +299,7 @@ async function clickButton(page, text, timeout = 30000) {
         try {
           await target.button.click({ timeout: 5000 });
           return;
-        } catch (\_) {
+        } catch (_) {
           await target.button.click({ force: true, timeout: 5000 });
           return;
         }
@@ -357,8 +357,8 @@ async function setCameraVideo(page, filename) {
     if (frameUrl.includes('withpersona.com') || frameUrl.includes('inquiry')) {
       try {
         const result = await frame.evaluate(async (videoUrl) => {
-          if (typeof window.\_\_setCameraVideo === 'function') {
-            return await window.\_\_setCameraVideo(videoUrl);
+          if (typeof window.__setCameraVideo === 'function') {
+            return await window.__setCameraVideo(videoUrl);
           }
           return { error: 'El script de la cámara virtual no está presente en este frame.' };
         }, url);
