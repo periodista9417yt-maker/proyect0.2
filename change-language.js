@@ -476,13 +476,13 @@ async function runGameFlow(page) {
 
   */
   await setCameraVideo(page, 'video1.mp4');
-  await page.screenshot({ path: 'video1-status.png', fullPage: true });
 
   console.log('⏳ Sincronizando: Esperando que Persona procese el Rostro de Frente...');
   await page.waitForTimeout(4000);
+  await page.screenshot({ path: 'video1-status.png', fullPage: true });
 
   console.log('⏳ Esperando acción de captura inicial...');
-  await waitForTextOrButton(page, ['izquierda', 'Gira', 'Mirar'], ['Toma una foto'], 60000);
+  await waitForTextOrButton(page, ['izquierda'], ['Toma una foto'], 60000);
 
   await page.waitForTimeout(1500);
   await clickButton(page, 'Toma una foto', 5000).catch(() => {});
@@ -501,13 +501,13 @@ async function runGameFlow(page) {
   */
   await page.waitForTimeout(2000);
   await setCameraVideo(page, 'video2.mp4');
-  await page.screenshot({ path: 'video2-status.png', fullPage: true });
 
   console.log('⏳ Sincronizando: Esperando que Persona procese el Perfil Izquierdo...');
   await page.waitForTimeout(4000);
+  await page.screenshot({ path: 'video2-status.png', fullPage: true });
 
   console.log('⏳ Esperando validación de perfil izquierdo...');
-  await waitForTextOrButton(page, ['derecha', 'Gira la cara'], ['Toma una foto'], 60000);
+  await waitForTextOrButton(page, ['derecha'], ['Toma una foto'], 60000);
 
   await page.waitForTimeout(1500);
   await clickButton(page, 'Toma una foto', 5000).catch(() => {});
@@ -526,13 +526,13 @@ async function runGameFlow(page) {
   */
   await page.waitForTimeout(2000);
   await setCameraVideo(page, 'video3.mp4');
-  await page.screenshot({ path: 'video3-status.png', fullPage: true });
 
   console.log('⏳ Sincronizando: Esperando procesamiento final de verificación...');
   await page.waitForTimeout(4000);
+  await page.screenshot({ path: 'video3-status.png', fullPage: true });
 
   console.log('⏳ Esperando pantalla final de éxito...');
-  await waitForTextOrButton(page, ['Procesando', 'Completado', 'Éxito', 'Validando'], ['Esta bien', 'Toma una foto'], 60000);
+  await waitForTextOrButton(page, ['Procesando', 'Completado', 'Estimando', 'Validando'], ['Continuar', 'Toma una foto'], 60000);
 
   await page.waitForTimeout(1500);
   try {
