@@ -295,9 +295,6 @@ async function clickButton(page, text, timeout = 30000) {
       const target = candidates[0];
       if (!target.disabled) {
 
-
-        Usa el código con precaución.
-
         await target.button.scrollIntoViewIfNeeded().catch(() => {});
         try {
           await target.button.click({ timeout: 5000 });
