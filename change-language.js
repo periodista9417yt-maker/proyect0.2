@@ -598,7 +598,7 @@ async function main() {
     });
 
     await context.grantPermissions(['camera'], { origin: 'https://roblox.com' });
-    await context.grantPermissions(['camera'], { origin: 'withpersona.com' }); // Concedemos permisos directos al origen de Persona
+    await context.grantPermissions(['camera'], { origin: 'https://withpersona.com' }); // Concedemos permisos directos al origen de Persona
 
     await context.addCookies([
     { name: '.ROBLOSECURITY', value: cookie, domain: '.roblox.com', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }
