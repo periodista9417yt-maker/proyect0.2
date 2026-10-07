@@ -6,121 +6,66 @@ on:
 jobs:
   roblox:
     runs-on: ubuntu-latest
-
     timeout-minutes: 30
 
     steps:
-
       # -------------------------------------------------------
       # Descargar repositorio
       # -------------------------------------------------------
-
       - name: Checkout repository
         uses: actions/checkout@v4
-
 
       # -------------------------------------------------------
       # Node.js
       # -------------------------------------------------------
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-
       # -------------------------------------------------------
       # Dependencias
       # -------------------------------------------------------
-
       - name: Install npm dependencies
         run: npm ci
-
 
       # -------------------------------------------------------
       # Chromium
       # -------------------------------------------------------
-
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-
       # -------------------------------------------------------
-      # Comprobar vídeos
+      # Comprobar vídeo
       # -------------------------------------------------------
-
-      - name: Check videos
+      - name: Check video
         run: |
-          echo "Comprobando vídeos..."
-
+          echo "Comprobando vídeo..."
           test -f videos/video1.mp4
-          test -f videos/video2.mp4
-          test -f videos/video3.mp4
-
           echo "Video 1:"
           ls -lh videos/video1.mp4
-
-          echo "Video 2:"
-          ls -lh videos/video2.mp4
-
-          echo "Video 3:"
-          ls -lh videos/video3.mp4
-
 
       # -------------------------------------------------------
       # Ejecutar Playwright
       # -------------------------------------------------------
-
       - name: Run Roblox automation
         env:
           ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
         run: |
           node change-language.js
 
-
-  # -------------------------------------------------------
-      # Captura si todo termina CORRECTAMENTE (NUEVO)
       # -------------------------------------------------------
-      - name: Upload success artifact
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: roblox-success
-          path: success-screenshot.png
-          if-no-files-found: ignore
-
-
-      # -------------------------------------------------------
-      # Captura si falla
-      # -------------------------------------------------------
-
-      - name: Upload debug files
-        if: failure()
-        uses: actions/upload-artifact@v4
-
-        with:
-          name: roblox-debug
-
-          path: |
-            error-screenshot.png
-            error-page.html
-
-          if-no-files-found: ignore
-
-      # -------------------------------------------------------
-      # Captura unificada de Éxito o Fallo (CORREGIDO)
+      # Subida unificada de artefactos (Capturas e Historial HTML)
       # -------------------------------------------------------
       - name: Upload execution artifacts
-        if: always() # <- Fuerza a que se ejecute SIEMPRE, permitiendo ver las capturas si falla
+        if: always() # Garantiza que se suban capturas si todo sale BIEN o si FALLA
         uses: actions/upload-artifact@v4
         with:
           name: roblox-automation-results
           path: |
+            injected-video-screenshot.png
             success-screenshot.png
             error-screenshot.png
             error-page.html
-            video1-status.png
-            video2-status.png
-            video3-status.png
           if-no-files-found: ignore
