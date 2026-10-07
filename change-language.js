@@ -321,7 +321,7 @@ async function runGameFlow(page) {
 
     for (const frame of frames) {
       if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
-        const isCompletado = await frame.getByText(/completado/i).first().isVisible().catch(() => false);
+        const isCompletado = await frame.getByText(/estimando/i).first().isVisible().catch(() => false);
         if (isCompletado) {
           completado = true;
           break;
@@ -331,6 +331,7 @@ async function runGameFlow(page) {
 
     if (completado) {
       console.log('🎉 Se detectó la palabra "Completado". Verificación exitosa.');
+      
       break;
     }
 
@@ -342,6 +343,7 @@ async function runGameFlow(page) {
   }
 
   if (!completado) {
+    
     throw new Error('Se alcanzó el tiempo límite de espera sin detectar el estado "Completado".');
   }
 
