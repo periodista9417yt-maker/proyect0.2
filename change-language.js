@@ -1,4 +1,10 @@
-const { chromium } = require('playwright');
+// Reemplazamos require('playwright') por playwright-extra y el plugin stealth
+const { chromium } = require('playwright-extra');
+const stealth = require('puppeteer-extra-plugin-stealth')();
+
+// Aplicamos el plugin Stealth globalmente
+chromium.use(stealth());
+
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
@@ -303,16 +309,15 @@ async function runGameFlow(page) {
     throw new Error('No se encontró la interfaz inicial de la cámara de Persona.');
   }
 
-  // 1. INYECTAR UN SOLO VÍDEO Y TOMAR CAPTURA DE PANTALLA
+  // Inyectar vídeo y tomar captura tras la inyección
   await setCameraVideo(page, 'video1.mp4');
-  await page.waitForTimeout(10000); // Tiempo para renderizar los primeros frames
+  await page.waitForTimeout(8000);
   await page.screenshot({ path: 'injected-video-screenshot.png', fullPage: true });
   console.log('📸 Captura tomada tras la inyección del vídeo: injected-video-screenshot.png');
 
   console.log('⏳ Esperando verificación continua hasta detectar "Completado"...');
 
-  // 2. ESPERAR A LA PALABRA "COMPLETADO"
-  const MAX_WAIT_TIME = 90000; // 3 minutos
+  const MAX_WAIT_TIME = 180000;
   const startTime = Date.now();
   let completado = false;
 
@@ -331,7 +336,6 @@ async function runGameFlow(page) {
 
     if (completado) {
       console.log('🎉 Se detectó la palabra "Completado". Verificación exitosa.');
-      
       break;
     }
 
@@ -343,22 +347,20 @@ async function runGameFlow(page) {
   }
 
   if (!completado) {
-    
     throw new Error('Se alcanzó el tiempo límite de espera sin detectar el estado "Completado".');
   }
 
-  // 3. CAPTURA AL FINALIZAR
   await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
   console.log('📸 Captura de finalización generada: success-screenshot.png');
 }
 
 /*
  * ------------------------------------------------------------
- * MAIN CON CAPTURA DE ERROR
+ * MAIN CON STEALTH Y EMULACIÓN MÓVIL
  * ------------------------------------------------------------
  */
 async function main() {
-  console.log('🚀 Iniciando servicio de automatización...');
+  console.log('🚀 Iniciando servicio de automatización con Stealth...');
   const cookie = process.env.ROBLOSECURITY;
 
   if (!cookie) {
@@ -373,6 +375,7 @@ async function main() {
   let browser = null;
 
   try {
+    // Lanzamos la instancia con Chromium Stealth activado y argumentos antidetex
     browser = await chromium.launch({
       headless: true,
       args: [
@@ -381,7 +384,8 @@ async function main() {
         '--autoplay-policy=no-user-gesture-required',
         '--disable-dev-shm-usage',
         '--disable-web-security',
-        '--allow-running-insecure-content'
+        '--allow-running-insecure-content',
+        '--disable-blink-features=AutomationControlled'
       ]
     });
 
@@ -426,7 +430,6 @@ async function main() {
     console.error('=================================\n❌ AUTOMATIZACIÓN FALLÓ\n=================================');
     console.error(error.stack || error.message);
 
-    // CAPTURA SI OCURRE UN ERROR
     if (browser) {
       try {
         const pages = browser.contexts()?.[0]?.pages();
