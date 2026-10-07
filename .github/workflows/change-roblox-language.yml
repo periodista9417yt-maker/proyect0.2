@@ -9,57 +9,37 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      # -------------------------------------------------------
-      # Descargar repositorio
-      # -------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # -------------------------------------------------------
-      # Node.js
-      # -------------------------------------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
-      # -------------------------------------------------------
-      # Dependencias
-      # -------------------------------------------------------
-      - name: Install npm dependencies
-        run: npm ci
+      - name: Install npm dependencies & Stealth
+        run: |
+          npm ci
+          npm install playwright-extra puppeteer-extra-plugin-stealth
 
-      # -------------------------------------------------------
-      # Chromium
-      # -------------------------------------------------------
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      # -------------------------------------------------------
-      # Comprobar vídeo
-      # -------------------------------------------------------
       - name: Check video
         run: |
           echo "Comprobando vídeo..."
           test -f videos/video1.mp4
-          echo "Video 1:"
           ls -lh videos/video1.mp4
 
-      # -------------------------------------------------------
-      # Ejecutar Playwright
-      # -------------------------------------------------------
       - name: Run Roblox automation
         env:
           ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
         run: |
           node change-language.js
 
-      # -------------------------------------------------------
-      # Subida unificada de artefactos (Capturas e Historial HTML)
-      # -------------------------------------------------------
       - name: Upload execution artifacts
-        if: always() # Garantiza que se suban capturas si todo sale BIEN o si FALLA
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: roblox-automation-results
