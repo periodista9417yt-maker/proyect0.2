@@ -312,7 +312,7 @@ async function runGameFlow(page) {
   console.log('⏳ Esperando verificación continua hasta detectar "Completado"...');
 
   // 2. ESPERAR A LA PALABRA "COMPLETADO"
-  const MAX_WAIT_TIME = 180000; // 3 minutos
+  const MAX_WAIT_TIME = 90000; // 3 minutos
   const startTime = Date.now();
   let completado = false;
 
