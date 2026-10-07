@@ -375,7 +375,7 @@ async function main() {
 
   try {
     browser = await chromium.launch({
-      headless: true,
+      headless: false,
       args: [
         '--use-fake-ui-for-media-stream',
         '--use-fake-device-for-media-stream',
