@@ -7,7 +7,6 @@ const TARGET_LANGUAGE_LABEL = 'Español (España)';
 const ACCOUNT_URL = 'https://www.roblox.com/my/account#!/info';
 const GAME_URL = 'https://www.roblox.com/my/account#!/info';
 
-// Solo utilizaremos un vídeo continuo
 const VIDEO_PATH = path.resolve('videos/video1.mp4');
 
 const PORT = 8765;
@@ -70,7 +69,7 @@ function startVideoServer() {
 
 /*
  * ------------------------------------------------------------
- * INYECTOR DE CÁMARA REAL EN VIVO (SIMULACIÓN SENSOR CMOS + CANVAS)
+ * CÁMARA VIRTUAL - SCRIPT DE INYECCIÓN
  * ------------------------------------------------------------
  */
 const CAMERA_INIT_SCRIPT = () => {
@@ -94,7 +93,7 @@ const CAMERA_INIT_SCRIPT = () => {
     video.muted = true;
     video.playsInline = true;
     video.autoplay = true;
-    video.loop = true; // Bucle continuo transparente
+    video.loop = true;
 
     video.style.position = 'fixed';
     video.style.left = '-10000px';
@@ -103,17 +102,13 @@ const CAMERA_INIT_SCRIPT = () => {
     video.style.height = '1px';
 
     document.documentElement.appendChild(video);
-
-    // Captura del canvas simulando los 30 FPS nativos de un iPhone
     fakeStream = canvas.captureStream(30);
 
-    // Renderizado en vivo con emulación de sensor físico (Ruido y micro-jittering)
     function render() {
       if (video && video.readyState >= 2) {
         try {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          // Inyección de ruido de sensor CMOS para evitar patrones estáticos
           const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const data = imgData.data;
           const noiseIntensity = 2.0;
@@ -128,7 +123,6 @@ const CAMERA_INIT_SCRIPT = () => {
         } catch (_) {}
       }
 
-      // Micro variación de frames imitando el comportamiento de captura móvil real
       const jitterDelay = Math.random() > 0.9 ? Math.random() * 2 : 0;
       if (jitterDelay > 0) {
         setTimeout(() => { requestAnimationFrame(render); }, jitterDelay);
@@ -178,7 +172,7 @@ const CAMERA_INIT_SCRIPT = () => {
 
 /*
  * ------------------------------------------------------------
- * HELPER DE BÚSQUEDA Y ESPERA EN IFRAMES
+ * HELPER DE BÚSQUEDA Y ESPERA
  * ------------------------------------------------------------
  */
 async function wait(ms) {
@@ -270,7 +264,7 @@ async function changeLanguage(page) {
 
 /*
  * ------------------------------------------------------------
- * FLUJO PRINCIPAL (UN SOLO VÍDEO HASTA VER "COMPLETADO")
+ * FLUJO PRINCIPAL
  * ------------------------------------------------------------
  */
 async function runGameFlow(page) {
@@ -309,13 +303,16 @@ async function runGameFlow(page) {
     throw new Error('No se encontró la interfaz inicial de la cámara de Persona.');
   }
 
-  // 1. Inyectar UN solo vídeo en vivo desde el inicio
+  // 1. INYECTAR UN SOLO VÍDEO Y TOMAR CAPTURA DE PANTALLA
   await setCameraVideo(page, 'video1.mp4');
+  await page.waitForTimeout(2000); // Tiempo para renderizar los primeros frames
+  await page.screenshot({ path: 'injected-video-screenshot.png', fullPage: true });
+  console.log('📸 Captura tomada tras la inyección del vídeo: injected-video-screenshot.png');
 
   console.log('⏳ Esperando verificación continua hasta detectar "Completado"...');
 
-  // 2. Esperar indefinidamente haciendo clic automático si requiere capturas intermedias
-  const MAX_WAIT_TIME = 180000; // 3 minutos máximo de tolerancia
+  // 2. ESPERAR A LA PALABRA "COMPLETADO"
+  const MAX_WAIT_TIME = 180000; // 3 minutos
   const startTime = Date.now();
   let completado = false;
 
@@ -324,7 +321,6 @@ async function runGameFlow(page) {
 
     for (const frame of frames) {
       if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
-        // Verificar si apareció el mensaje de éxito
         const isCompletado = await frame.getByText(/completado/i).first().isVisible().catch(() => false);
         if (isCompletado) {
           completado = true;
@@ -338,7 +334,6 @@ async function runGameFlow(page) {
       break;
     }
 
-    // Auto presionar "Toma una foto" si la interfaz lo solicita durante la simulación continua
     try {
       await clickButton(page, 'Toma una foto', 800);
     } catch (_) {}
@@ -350,12 +345,14 @@ async function runGameFlow(page) {
     throw new Error('Se alcanzó el tiempo límite de espera sin detectar el estado "Completado".');
   }
 
+  // 3. CAPTURA AL FINALIZAR
   await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
+  console.log('📸 Captura de finalización generada: success-screenshot.png');
 }
 
 /*
  * ------------------------------------------------------------
- * MAIN (EMULACIÓN DISPOSITIVO MÓVIL IPHONE 14 PRO)
+ * MAIN CON CAPTURA DE ERROR
  * ------------------------------------------------------------
  */
 async function main() {
@@ -407,7 +404,6 @@ async function main() {
 
     const page = await context.newPage();
 
-    // Eliminar restricciones CSP para inyección fluida de la cámara
     await page.route('**/*', async route => {
       try {
         const response = await route.fetch();
@@ -427,6 +423,20 @@ async function main() {
   } catch (error) {
     console.error('=================================\n❌ AUTOMATIZACIÓN FALLÓ\n=================================');
     console.error(error.stack || error.message);
+
+    // CAPTURA SI OCURRE UN ERROR
+    if (browser) {
+      try {
+        const pages = browser.contexts()?.[0]?.pages();
+        if (pages && pages.length > 0) {
+          await pages[0].screenshot({ path: 'error-screenshot.png', fullPage: true });
+          fs.writeFileSync('error-page.html', await pages[0].content());
+          console.log('📸 Captura y HTML de error generados exitosamente.');
+        }
+      } catch (cErr) {
+        console.error('⚠️ Error guardando archivos de depuración:', cErr.message);
+      }
+    }
     process.exitCode = 1;
   } finally {
     if (browser) await browser.close();
