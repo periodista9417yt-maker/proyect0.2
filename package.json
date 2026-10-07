@@ -7,8 +7,10 @@
   "scripts": {
     "start": "node change-language.js"
   },
-  "dependencies": {
-    "playwright": "^1.55.0"
+ "dependencies": {
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "playwright": "^1.40.0"
   }
 }
 
