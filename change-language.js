@@ -305,7 +305,7 @@ async function runGameFlow(page) {
 
   // 1. INYECTAR UN SOLO VÍDEO Y TOMAR CAPTURA DE PANTALLA
   await setCameraVideo(page, 'video1.mp4');
-  await page.waitForTimeout(2000); // Tiempo para renderizar los primeros frames
+  await page.waitForTimeout(10000); // Tiempo para renderizar los primeros frames
   await page.screenshot({ path: 'injected-video-screenshot.png', fullPage: true });
   console.log('📸 Captura tomada tras la inyección del vídeo: injected-video-screenshot.png');
 
