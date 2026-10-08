@@ -50,7 +50,3 @@ jobs:
             error-page.html
           if-no-files-found: ignore
           
-      - name: Install npm dependencies
-        run: |
-          npm install
-          npm install playwright-extra puppeteer-extra-plugin-stealth
