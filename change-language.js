@@ -1,6 +1,7 @@
 const { chromium } = require('playwright-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
 
 // Aplicamos el plugin Stealth
@@ -10,12 +11,156 @@ const TARGET_LANGUAGE_LABEL = 'Español (España)';
 const ACCOUNT_URL = 'https://www.roblox.com/my/account#!/info';
 const GAME_URL = 'https://www.roblox.com/my/account#!/info';
 
-// Ruta absoluta al vídeo que Chromium usará como cámara
 const VIDEO_PATH = path.resolve('videos/video1.mp4');
+const PORT = 8765;
 
 /*
  * ------------------------------------------------------------
- * HELPER DE BÚSQUEDA Y ESPERA EN INTERFAZ
+ * SERVIDOR LOCAL DE VÍDEO
+ * ------------------------------------------------------------
+ */
+function startVideoServer() {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      if (!fs.existsSync(VIDEO_PATH)) {
+        res.writeHead(404, { 'Access-Control-Allow-Origin': '*' });
+        res.end('Not found');
+        return;
+      }
+
+      const stat = fs.statSync(VIDEO_PATH);
+      const range = req.headers.range;
+
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Content-Type', 'video/mp4');
+
+      if (range) {
+        const match = /bytes=(\d+)-(\d*)/.exec(range);
+        if (!match) {
+          res.writeHead(416);
+          res.end();
+          return;
+        }
+        const start = Number(match[1]);
+        let end = match[2] ? Number(match[2]) : stat.size - 1;
+        if (end >= stat.size) end = stat.size - 1;
+
+        const chunkSize = end - start + 1;
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+          'Content-Length': chunkSize
+        });
+        fs.createReadStream(VIDEO_PATH, { start, end }).pipe(res);
+      } else {
+        res.writeHead(200, { 'Content-Length': stat.size });
+        fs.createReadStream(VIDEO_PATH).pipe(res);
+      }
+    });
+
+    server.on('error', reject);
+    server.listen(PORT, '127.0.0.1', () => {
+      console.log(`🎥 Servidor de vídeo iniciado en http://127.0.0.1:${PORT}`);
+      resolve(server);
+    });
+  });
+}
+
+/*
+ * ------------------------------------------------------------
+ * INYECCIÓN Y MOCKEO AVANZADO DE WEBRTC / WEBCAM
+ * ------------------------------------------------------------
+ */
+const CAMERA_INIT_SCRIPT = (videoUrl) => {
+  const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  const originalEnumerateDevices = navigator.mediaDevices.enumerateDevices.bind(navigator.mediaDevices);
+
+  let fakeStream = null;
+  let canvas = null;
+  let ctx = null;
+  let video = null;
+
+  // 1. Enmascarar enumerateDevices para simular cámara frontal real de móvil
+  navigator.mediaDevices.enumerateDevices = async function() {
+    return [
+      {
+        deviceId: 'front-camera-device-id',
+        kind: 'videoinput',
+        label: 'Front Camera (Facetime HD)',
+        groupId: 'group-id-1'
+      },
+      {
+        deviceId: 'default-audio-id',
+        kind: 'audioinput',
+        label: 'iPhone Microphone',
+        groupId: 'group-id-2'
+      }
+    ];
+  };
+
+  // 2. Crear Stream de Video dinámico
+  async function createCamera() {
+    if (fakeStream) return fakeStream;
+
+    canvas = document.createElement('canvas');
+    canvas.width = 720;
+    canvas.height = 1280;
+    ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+
+    video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    video.loop = true;
+    video.src = videoUrl + '?t=' + Date.now();
+
+    video.style.position = 'fixed';
+    video.style.left = '-10000px';
+    video.style.top = '-10000px';
+    document.documentElement.appendChild(video);
+
+    await video.play().catch(() => {});
+
+    fakeStream = canvas.captureStream(30);
+
+    function render() {
+      if (video && video.readyState >= 2) {
+        try {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imgData.data;
+          const noiseIntensity = 1.8;
+
+          for (let i = 0; i < data.length; i += 16) {
+            const noise = (Math.random() - 0.5) * noiseIntensity;
+            data[i]     = Math.min(255, Math.max(0, data[i] + noise));
+            data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
+            data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
+          }
+          ctx.putImageData(imgData, 0, 0);
+        } catch (_) {}
+      }
+      requestAnimationFrame(render);
+    }
+
+    render();
+    return fakeStream;
+  }
+
+  navigator.mediaDevices.getUserMedia = async function(constraints) {
+    if (constraints && constraints.video) {
+      return createCamera();
+    }
+    return originalGetUserMedia(constraints);
+  };
+};
+
+/*
+ * ------------------------------------------------------------
+ * HELPER DE BÚSQUEDA Y ESPERA
  * ------------------------------------------------------------
  */
 async function wait(ms) {
@@ -37,7 +182,7 @@ async function clickButton(page, text, timeout = 30000) {
           if (!(await button.isVisible().catch(() => false))) continue;
 
           const buttonText = (await button.innerText().catch(() => '')).trim();
-          if (buttonText === text && !(await button.isDisabled().catch(() => false))) {
+          if (buttonText.includes(text) && !(await button.isDisabled().catch(() => false))) {
             await button.scrollIntoViewIfNeeded().catch(() => {});
             await button.click({ force: true, timeout: 5000 });
             return;
@@ -54,7 +199,7 @@ async function clickButton(page, text, timeout = 30000) {
       if (!(await button.isVisible().catch(() => false))) continue;
 
       const buttonText = (await button.innerText().catch(() => '')).trim();
-      if (buttonText === text && !(await button.isDisabled().catch(() => false))) {
+      if (buttonText.includes(text) && !(await button.isDisabled().catch(() => false))) {
         await button.scrollIntoViewIfNeeded().catch(() => {});
         await button.click({ force: true, timeout: 5000 }).catch(() => {});
         return;
@@ -105,12 +250,20 @@ async function runGameFlow(page) {
   console.log('⏳ Esperando inicialización de la cámara de Persona...');
   const TEXTO_CAMARA = 'Centra tu rostro en el círculo';
   let iframePersona = null;
-  const deadline = Date.now() + 30000;
+  const deadline = Date.now() + 45000;
 
   while (Date.now() < deadline) {
     const frames = page.frames();
     for (const frame of frames) {
       if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
+        
+        // Si intenta mandarnos a continuar en otro dispositivo, forzamos clic en "Continuar aquí" si existe
+        const tryOther = await frame.getByText('Continuar en otro dispositivo').first().isVisible().catch(() => false);
+        if (tryOther) {
+          console.log('⚠️ Detectada pantalla de cambio de dispositivo. Intentando forzar modo web...');
+          await clickButton(page, 'Continuar en este dispositivo', 5000).catch(() => {});
+        }
+
         const visible = await frame.getByText(TEXTO_CAMARA).first().isVisible().catch(() => false);
         if (visible) {
           iframePersona = frame;
@@ -126,14 +279,13 @@ async function runGameFlow(page) {
     throw new Error('No se encontró la interfaz inicial de la cámara de Persona.');
   }
 
-  // Tomar captura inicial tras la activación de la cámara
   await page.waitForTimeout(8000);
   await page.screenshot({ path: 'injected-video-screenshot.png', fullPage: true });
   console.log('📸 Captura tomada tras la activación de la cámara: injected-video-screenshot.png');
 
   console.log('⏳ Esperando verificación continua hasta detectar "Completado"...');
 
-  const MAX_WAIT_TIME = 180000;
+  const MAX_WAIT_TIME = 120000;
   const startTime = Date.now();
   let completado = false;
 
@@ -172,7 +324,7 @@ async function runGameFlow(page) {
 
 /*
  * ------------------------------------------------------------
- * MAIN CON FLAGS DE CHROMIUM PARA INYECCIÓN DE VÍDEO NATIVA
+ * MAIN CON CONFIGURACIÓN ANTIDETECCIÓN PURE-STEALTH
  * ------------------------------------------------------------
  */
 async function main() {
@@ -187,16 +339,14 @@ async function main() {
     throw new Error(`Archivo de vídeo no encontrado en: ${VIDEO_PATH}`);
   }
 
+  const server = await startVideoServer();
   let browser = null;
 
   try {
-    // Inyección nativa de vídeo usando flags de Chromium
+    // SIN FLAGS DE FAKE DEVICE QUE DETECTA PERSONA
     browser = await chromium.launch({
       headless: true,
       args: [
-        '--use-fake-ui-for-media-stream',
-        '--use-fake-device-for-media-stream',
-        `--use-file-for-fake-video-capture=${VIDEO_PATH}`,
         '--autoplay-policy=no-user-gesture-required',
         '--disable-dev-shm-usage',
         '--disable-web-security',
@@ -206,11 +356,8 @@ async function main() {
     });
 
     const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
-      viewport: { width: 393, height: 852 },
-      deviceScaleFactor: 3,
-      isMobile: true,
-      hasTouch: true,
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      viewport: { width: 1280, height: 720 },
       locale: 'es-ES',
       permissions: ['camera']
     });
@@ -221,6 +368,10 @@ async function main() {
     await context.addCookies([
       { name: '.ROBLOSECURITY', value: cookie, domain: '.roblox.com', path: '/', httpOnly: true, secure: true, sameSite: 'Lax' }
     ]);
+
+    // Inyectamos script camuflado directamente en todas las ventanas e iframes
+    const videoUrl = `http://127.0.0.1:${PORT}/video1.mp4`;
+    await context.addInitScript({ content: `(${CAMERA_INIT_SCRIPT.toString()})("${videoUrl}");` });
 
     const page = await context.newPage();
 
@@ -259,6 +410,8 @@ async function main() {
     process.exitCode = 1;
   } finally {
     if (browser) await browser.close();
+    server.close();
+    console.log('🛑 Servidor de vídeos detenido.');
   }
 }
 
