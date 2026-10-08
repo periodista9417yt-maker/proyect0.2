@@ -20,7 +20,7 @@ jobs:
 
       - name: Install npm dependencies & Stealth
         run: |
-          npm ci
+          npm install
           npm install playwright-extra puppeteer-extra-plugin-stealth
 
       - name: Install Playwright Chromium
