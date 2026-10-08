@@ -1,9 +1,8 @@
-// Reemplazamos require('playwright') por playwright-extra y el plugin stealth
 const { chromium } = require('playwright-extra');
-const stealth = require('puppeteer-extra-plugin-stealth')();
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 
-// Aplicamos el plugin Stealth globalmente
-chromium.use(stealth());
+// Instanciamos el plugin correctamente
+chromium.use(StealthPlugin());
 
 const fs = require('fs');
 const http = require('http');
