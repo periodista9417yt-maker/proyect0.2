@@ -172,9 +172,11 @@ async function clickButton(page, text, timeout = 30000) {
 
   while (Date.now() < deadline) {
     const frames = page.frames();
+    
+    // 1. Buscar en iframes (Persona / Roblox modal)
     for (const frame of frames) {
-      if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
-        const iframeButtons = frame.locator('button, [role="button"]');
+      if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry') || frame.url().includes('roblox.com')) {
+        const iframeButtons = frame.locator('button, [role="button"], a[class*="button"]');
         const iframeCount = await iframeButtons.count();
 
         for (let j = 0; j < iframeCount; j++) {
@@ -182,7 +184,10 @@ async function clickButton(page, text, timeout = 30000) {
           if (!(await button.isVisible().catch(() => false))) continue;
 
           const buttonText = (await button.innerText().catch(() => '')).trim();
-          if (buttonText.includes(text) && !(await button.isDisabled().catch(() => false))) {
+          
+          // Coincidencia exacta del texto
+          if (buttonText === text && !(await button.isDisabled().catch(() => false))) {
+            console.log(`🎯 Botón exacto encontrado en iframe: "${buttonText}"`);
             await button.scrollIntoViewIfNeeded().catch(() => {});
             await button.click({ force: true, timeout: 5000 });
             return;
@@ -191,6 +196,7 @@ async function clickButton(page, text, timeout = 30000) {
       }
     }
 
+    // 2. Buscar en el contexto global de la página
     const globalButtons = page.locator('button, [role="button"], [class*="button"]');
     const globalCount = await globalButtons.count();
 
@@ -199,14 +205,20 @@ async function clickButton(page, text, timeout = 30000) {
       if (!(await button.isVisible().catch(() => false))) continue;
 
       const buttonText = (await button.innerText().catch(() => '')).trim();
-      if (buttonText.includes(text) && !(await button.isDisabled().catch(() => false))) {
+
+      // Coincidencia exacta del texto
+      if (buttonText === text && !(await button.isDisabled().catch(() => false))) {
+        console.log(`🎯 Botón exacto encontrado en página: "${buttonText}"`);
         await button.scrollIntoViewIfNeeded().catch(() => {});
         await button.click({ force: true, timeout: 5000 }).catch(() => {});
         return;
       }
     }
+
     await page.waitForTimeout(500);
   }
+
+  throw new Error(`No se pudo encontrar el botón exacto "${text}" tras ${timeout}ms`);
 }
 
 async function changeLanguage(page) {
@@ -236,7 +248,7 @@ async function changeLanguage(page) {
  * ------------------------------------------------------------
  */
 async function runGameFlow(page) {
-  console.log('➡️ Abriendo flujo de verificación...');
+console.log('➡️ Abriendo flujo de verificación...');
   await page.goto(GAME_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await wait(5000);
 
