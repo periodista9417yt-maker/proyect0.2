@@ -129,8 +129,8 @@ const CAMERA_INIT_SCRIPT = (videoUrl) => {
     const videoTrack = fakeStream.getVideoTracks()[0];
     if (videoTrack) {
       videoTrack.getCapabilities = () => ({
-        width: { max: 1280, min: 640 },
-        height: { max: 720, min: 480 },
+        width: { max: 720, min: 640 },
+        height: { max: 1280, min: 480 },
         facingMode: ['user', 'environment'],
         frameRate: { max: 30, min: 15 }
       });
