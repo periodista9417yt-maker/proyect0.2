@@ -271,7 +271,7 @@ async function runGameFlow(page) {
   await page.screenshot({ path: 'injected-video-screenshot.png', fullPage: true });
   console.log('📸 Captura tomada tras la activación de la cámara: injected-video-screenshot.png');
 
-  console.log('⏳ Esperando verificación continua en la interfaz hasta detectar "Completado"...');
+  console.log('⏳ Esperando verificación continua en la interfaz hasta detectar "Estimando"...');
 
   const MAX_WAIT_TIME = 180000;
   const startTime = Date.now();
@@ -294,20 +294,20 @@ async function runGameFlow(page) {
     }
 
     if (completado) {
-      console.log('🎉 Se detectó el mensaje real de "Completado". Verificación exitosa.');
+      console.log('🎉 Se detectó el mensaje real de "Estimando". Verificación exitosa.');
       break;
     }
 
     // Presionar el botón de capturar si la interfaz lo requiere
     try {
-      await clickButton(page, 'Toma una foto', 1000);
+      // await clickButton(page, 'Toma una foto', 1000);
     } catch (_) {}
 
     await page.waitForTimeout(1500);
   }
 
   if (!completado) {
-    throw new Error('Se alcanzó el tiempo límite de espera sin detectar la pantalla final de "Completado".');
+    throw new Error('Se alcanzó el tiempo límite de espera sin detectar la pantalla final de "Estimando".');
   }
 
   await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
