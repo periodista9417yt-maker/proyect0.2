@@ -241,7 +241,8 @@ async function runGameFlow(page) {
 
   await clickButton(page, 'Continuar', 30000);
   await page.waitForTimeout(1500);
-
+  await clickButton(page, 'Continuar', 30000);
+  await page.waitForTimeout(1500);
   console.log('⏳ Esperando inicialización de la cámara de Persona...');
   const TEXTO_CAMARA = 'Centra tu rostro en el círculo';
   let iframePersona = null;
