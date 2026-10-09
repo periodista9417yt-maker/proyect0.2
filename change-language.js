@@ -253,10 +253,10 @@ console.log('➡️ Abriendo flujo de verificación...');
   await wait(5000);
 
   await clickButton(page, 'Continuar con la cámara', 30000);
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(1500);
 
   await clickButton(page, 'Continuar', 30000);
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(1500);
   await clickButton(page, 'Continuar', 30000);
 
   console.log('⏳ Esperando inicialización de la cámara de Persona...');
