@@ -1,43 +1,41 @@
-name: Roblox Playwright Automation
+name: Cambiar idioma de Roblox
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # permite ejecutarlo manualmente desde la pestaña "Actions"
 
 jobs:
-  roblox:
+  change-language:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Imagen oficial de Playwright: ya trae Node.js y Chromium instalados,
+    # así nos ahorramos el paso de "npx playwright install --with-deps",
+    # que era el que más tiempo y recursos consumía.
+    container:
+      image: mcr.microsoft.com/playwright:v1.47.0-jammy
 
     steps:
-      - name: Checkout repository
+      - name: Clonar repo
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install npm dependencies & Stealth
+      - name: Instalar dependencias
         run: |
+          cd scripts
           npm install
-          npm install playwright-extra puppeteer-extra-plugin-stealth
 
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
-
-      - name: Check video
-        run: |
-          echo "Comprobando vídeo..."
-          test -f videos/video1.mp4
-          ls -lh videos/video1.mp4
-
-      - name: Run Roblox automation
+      - name: Ejecutar script de cambio de idioma
         env:
           ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
         run: |
+          cd scripts
           node change-language.js
 
+      - name: Subir captura de error (si falló)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-screenshot
+          path: scripts/error-screenshot.png
+          if-no-files-found: ignore
+    
       - name: Subir capturas del proceso
         if: always()
         uses: actions/upload-artifact@v4
@@ -45,4 +43,3 @@ jobs:
           name: screenshots-proceso
           path: scripts/*.png
           if-no-files-found: ignore
-          
