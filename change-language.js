@@ -1,7 +1,4 @@
 // change-language.js
-// Cambia el idioma en Roblox, avanza por los diálogos de la cámara y 
-// transmite un video falso mediante WebRTC usando flags de Chromium.
-
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
@@ -17,21 +14,17 @@ async function main() {
     process.exit(1);
   }
 
-  // Ruta absoluta al archivo de video (ej. convertido previamente a .y4m en el workflow)
-  // Nota: Chromium soporta nativamente archivos .y4m para --use-file-for-fake-video-capture
   const videoPath = path.resolve(__dirname, 'video-captura.y4m');
-  
   if (!fs.existsSync(videoPath)) {
-    console.warn('⚠️ No se encontró el archivo .y4m localmente, asegurate de convertir tu .mp4 a .y4m en el workflow de GitHub Actions.');
+    console.warn('⚠️ No se encontró el archivo .y4m localmente, asegurate de convertir tu .mp4 a .y4m en el workflow.');
   }
 
-  // Configuramos los argumentos (flags) de Chromium para WebRTC con video falso y omitir permisos
   const browser = await chromium.launch({
     headless: true,
     args: [
-      '--use-fake-ui-for-media-stream',                    // Omite la ventana emergente de permisos de cámara/micrófono
-      '--use-fake-device-for-media-stream',                 // Usa dispositivos multimedia falsos
-      `--use-file-for-fake-video-capture=${videoPath}`,     // Inyecta el archivo de video como señal de la cámara WebRTC
+      '--use-fake-ui-for-media-stream',
+      '--use-fake-device-for-media-stream',
+      `--use-file-for-fake-video-capture=${videoPath}`,
       '--no-sandbox',
       '--disable-setuid-sandbox',
     ],
@@ -42,10 +35,9 @@ async function main() {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
       '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     locale: 'es-ES',
-    permissions: ['camera'], // Concede explícitamente el permiso de cámara
+    permissions: ['camera'],
   });
 
-  // Inyectamos la cookie de sesión ANTES de navegar
   await context.addCookies([
     {
       name: '.ROBLOSECURITY',
@@ -94,34 +86,44 @@ async function main() {
     await page.waitForTimeout(2000);
 
     // -------------------------------------------------------------------------
-    // PASOS DE CÁMARA Y DIÁLOGOS DE CONTINUACIÓN
+    // CÁMARA Y DIÁLOGOS
     // -------------------------------------------------------------------------
     console.log('➡️ Buscando y haciendo clic en "Continuar con la cámara"...');
-    const cameraButton = page.getByRole('button', { name: /Continuar con la cámara/i }).first();
-    await cameraButton.click({ timeout: 10000 });
+    const cameraButton = page.locator('button:has-text("Continuar con la cámara"), [role="button"]:has-text("Continuar con la cámara")').first();
+    await cameraButton.waitFor({ state: 'visible', timeout: 15000 });
+    await cameraButton.click();
     console.log('✅ Botón "Continuar con la cámara" presionado.');
 
-    // Primer botón "Continuar" del diálogo
+    // Esperar de forma explícita el primer botón "Continuar" dentro del diálogo
     console.log('➡️ Esperando el primer diálogo y haciendo clic en "Continuar"...');
-    await page.waitForTimeout(1500);
-    const firstContinueButton = page.getByRole('button', { name: /^Continuar$/i }).first();
-    await firstContinueButton.click({ timeout: 10000 });
+    const firstContinueButton = page.locator('button:has-text("Continuar"), [role="button"]:has-text("Continuar")').first();
+    await firstContinueButton.waitFor({ state: 'visible', timeout: 15000 });
+    
+    // Captura justo al hacer clic en el primer continuar
+    await page.screenshot({ path: 'paso-primer-continuar.png', fullPage: true });
+    console.log('📸 Captura guardada: paso-primer-continuar.png');
+
+    await firstContinueButton.click();
     console.log('✅ Primer botón "Continuar" presionado.');
 
     // Segundo botón "Continuar" del siguiente diálogo
     console.log('➡️ Esperando el segundo diálogo y haciendo clic nuevamente en "Continuar"...');
-    await page.waitForTimeout(1500);
-    const secondContinueButton = page.getByRole('button', { name: /^Continuar$/i }).first();
-    await secondContinueButton.click({ timeout: 10000 });
+    await page.waitForTimeout(2000);
+    const secondContinueButton = page.locator('button:has-text("Continuar"), [role="button"]:has-text("Continuار")').first();
+    await secondContinueButton.waitFor({ state: 'visible', timeout: 15000 });
+    await secondContinueButton.click();
     console.log('✅ Segundo botón "Continuar" presionado.');
 
     // -------------------------------------------------------------------------
-    // TRANSMISIÓN WEBRTC (activada automáticamente por las flags de Chromium)
+    // TRANSMISIÓN WEBRTC
     // -------------------------------------------------------------------------
     console.log('➡️ Verificando transmisión WebRTC con el video inyectado...');
-    // Damos un margen de tiempo para que la página procese el stream de video de la cámara virtual
-    await page.waitForTimeout(5000);
-    console.log('✅ ¡Flujo de video WebRTC transmitido correctamente en el diálogo!');
+    await page.waitForTimeout(6000); // Margen para que inicie la transmisión de la cámara virtual
+
+    // Captura cuando se empieza a transmitir el video
+    await page.screenshot({ path: 'paso-transmision-webrtc.png', fullPage: true });
+    console.log('📸 Captura guardada: paso-transmision-webrtc.png');
+    console.log('✅ ¡Flujo de video WebRTC transmitido correctamente!');
 
   } catch (err) {
     console.error('❌ Error durante la automatización:', err.message);
