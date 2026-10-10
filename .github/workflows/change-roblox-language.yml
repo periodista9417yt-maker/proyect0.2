@@ -1,41 +1,55 @@
-name: Cambiar idioma de Roblox
+name: Roblox Playwright Automation
 
 on:
-  workflow_dispatch:   # permite ejecutarlo manualmente desde la pestaña "Actions"
+  workflow_dispatch:
 
 jobs:
-  change-language:
+  roblox:
     runs-on: ubuntu-latest
-    # Imagen oficial de Playwright: ya trae Node.js y Chromium instalados,
-    # así nos ahorramos el paso de "npx playwright install --with-deps",
-    # que era el que más tiempo y recursos consumía.
-    container:
-      image: mcr.microsoft.com/playwright:v1.47.0-jammy
+    timeout-minutes: 30
 
     steps:
-      - name: Clonar repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Instalar dependencias
-        run: |
-          cd scripts
-          npm install
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
 
-      - name: Ejecutar script de cambio de idioma
+      - name: Install npm dependencies & Stealth
+        run: |
+          npm install
+          npm install playwright-extra puppeteer-extra-plugin-stealth
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check video
+        run: |
+          echo "Comprobando vídeo..."
+          test -f videos/video1.mp4
+          ls -lh videos/video1.mp4
+
+      - name: Run Roblox automation
         env:
           ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
         run: |
-          cd scripts
           node change-language.js
 
-      - name: Subir captura de error (si falló)
-        if: failure()
+      - name: Upload execution artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: error-screenshot
-          path: scripts/error-screenshot.png
+          name: roblox-automation-results
+          path: |
+            injected-video-screenshot.png
+            success-screenshot.png
+            error-screenshot.png
+            error-page.html
           if-no-files-found: ignore
-    
+          
       - name: Subir capturas del proceso
         if: always()
         uses: actions/upload-artifact@v4
