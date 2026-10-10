@@ -38,7 +38,7 @@ jobs:
         run: |
           node change-language.js
 
-- name: Subir capturas del proceso
+      - name: Subir capturas del proceso
         if: always()
         uses: actions/upload-artifact@v4
         with:
