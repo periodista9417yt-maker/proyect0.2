@@ -91,7 +91,7 @@ async function main() {
     console.log('➡️ Buscando y haciendo clic en "Continuar con la cámara"...');
     const cameraButton = page.locator('button:has-text("Continuar con la cámara"), [role="button"]:has-text("Continuar con la cámara")').first();
     await cameraButton.waitFor({ state: 'visible', timeout: 15000 });
-    await cameraButton.click();
+    await cameraButton.click({ force: true });
     console.log('✅ Botón "Continuar con la cámara" presionado.');
 
     // Esperar de forma explícita el primer botón "Continuar" dentro del diálogo
@@ -103,15 +103,16 @@ async function main() {
     await page.screenshot({ path: 'paso-primer-continuar.png', fullPage: true });
     console.log('📸 Captura guardada: paso-primer-continuar.png');
 
-    await firstContinueButton.click();
+    // Usamos force: true para evitar que el overlay de Persona bloquee el clic
+    await firstContinueButton.click({ force: true });
     console.log('✅ Primer botón "Continuar" presionado.');
 
     // Segundo botón "Continuar" del siguiente diálogo
     console.log('➡️ Esperando el segundo diálogo y haciendo clic nuevamente en "Continuar"...');
     await page.waitForTimeout(2000);
-    const secondContinueButton = page.locator('button:has-text("Continuar"), [role="button"]:has-text("Continuار")').first();
+    const secondContinueButton = page.locator('button:has-text("Continuar"), [role="button"]:has-text("Continuar")').first();
     await secondContinueButton.waitFor({ state: 'visible', timeout: 15000 });
-    await secondContinueButton.click();
+    await secondContinueButton.click({ force: true });
     console.log('✅ Segundo botón "Continuar" presionado.');
 
     // -------------------------------------------------------------------------
