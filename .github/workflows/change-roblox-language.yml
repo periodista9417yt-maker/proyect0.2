@@ -38,15 +38,11 @@ jobs:
         run: |
           node change-language.js
 
-      - name: Upload execution artifacts
+- name: Subir capturas del proceso
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: roblox-automation-results
-          path: |
-            injected-video-screenshot.png
-            success-screenshot.png
-            error-screenshot.png
-            error-page.html
+          name: screenshots-proceso
+          path: scripts/*.png
           if-no-files-found: ignore
           
