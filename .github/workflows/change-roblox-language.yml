@@ -57,3 +57,7 @@ jobs:
           name: screenshots-proceso
           path: scripts/*.png
           if-no-files-found: ignore
+
+      - name: Descargar o preparar video MP4 del repositorio
+        run: |    
+          ffmpeg -i video1.mp4 -pix_fmt yuv420p video-captura.y4m
