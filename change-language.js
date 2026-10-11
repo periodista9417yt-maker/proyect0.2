@@ -86,7 +86,7 @@ async function main() {
     await page.waitForTimeout(2000);
 
     // -------------------------------------------------------------------------
-    // CÁMARA Y DIÁLOGOS DE PERSONA
+    // CÁMARA Y DIÁLOGOS DE PERSONA (DOM PRINCIPAL)
     // -------------------------------------------------------------------------
     console.log('➡️ Buscando y haciendo clic en "Continuar con la cámara"...');
     const cameraButton = page.locator('button:has-text("Continuar con la cámara"), [role="button"]:has-text("Continuar con la cámara")').first();
@@ -94,30 +94,27 @@ async function main() {
     await cameraButton.click({ force: true });
     console.log('✅ Botón "Continuar con la cámara" presionado.');
 
-    // El widget de Persona suele cargarse dentro de un iframe o un contenedor con ID/clase específica.
-    // Usamos frameLocator o un localizador contextual de iframe para interactuar con los botones internos.
-    console.log('➡️ Esperando el diálogo interno de Persona y haciendo clic en "Continuar"...');
-    
-    // Localizamos el iframe del widget de Persona
-    const personaFrame = page.frameLocator('iframe[title*="Persona"], iframe[src*="withpersona"], iframe').first();
-    
-    // Primer botón "Continuar" dentro del diálogo de Persona
-    const firstContinueButton = personaFrame.locator('button:has-text("Continuar"), [role="button"]:has-text("Continuar")').first();
+    // Damos un respiro para que el modal de Persona cargue en la página principal
+    console.log('➡️ Esperando a que aparezca el diálogo de Persona...');
+    await page.waitForTimeout(3000);
+
+    // Primer botón "Continuar" dentro del modal de Persona
+    const firstContinueButton = page.locator('button:has-text("Continuar"), [role="button"]:has-text("Continuar")').first();
     await firstContinueButton.waitFor({ state: 'visible', timeout: 20000 });
     
     await page.screenshot({ path: 'paso-primer-continuar.png', fullPage: true });
     console.log('📸 Captura guardada: paso-primer-continuar.png');
 
     await firstContinueButton.click({ force: true });
-    console.log('✅ Primer botón "Continuar" de Persona presionado.');
+    console.log('✅ Primer botón "Continuar" presionado.');
 
-    // Segundo botón "Continuar" dentro de Persona
-    console.log('➡️ Esperando el siguiente paso del diálogo y haciendo clic en "Continuar"...');
+    // Segundo botón "Continuar" dentro del modal de Persona
+    console.log('➡️ Esperando el siguiente paso y haciendo clic nuevamente en "Continuar"...');
     await page.waitForTimeout(2000);
-    const secondContinueButton = personaFrame.locator('button:has-text("Continuar"), [role="button"]:has-text("Continuar")').first();
+    const secondContinueButton = page.locator('button:has-text("Continuar"), [role="button"]:has-text("Continuar")').first();
     await secondContinueButton.waitFor({ state: 'visible', timeout: 15000 });
     await secondContinueButton.click({ force: true });
-    console.log('✅ Segundo botón "Continuar" de Persona presionado.');
+    console.log('✅ Segundo botón "Continuar" presionado.');
 
     // -------------------------------------------------------------------------
     // TRANSMISIÓN WEBRTC Y CAPTURAS POR TEXTO ("izquierda", "derecha", "estimando")
@@ -127,7 +124,7 @@ async function main() {
     // Esperar y capturar cuando aparezca el texto "izquierda"
     try {
       console.log('⏳ Esperando texto "izquierda"...');
-      await personaFrame.getByText(/izquierda/i).first().waitFor({ state: 'visible', timeout: 20000 });
+      await page.getByText(/izquierda/i).first().waitFor({ state: 'visible', timeout: 20000 });
       await page.screenshot({ path: 'paso-izquierda.png', fullPage: true });
       console.log('📸 Captura guardada: paso-izquierda.png');
     } catch (e) {
@@ -137,22 +134,21 @@ async function main() {
     // Esperar y capturar cuando aparezca el texto "derecha"
     try {
       console.log('⏳ Esperando texto "derecha"...');
-      await personaFrame.getByText(/derecha/i).first().waitFor({ state: 'visible', timeout: 20000 });
+      await page.getByText(/derecha/i).first().waitFor({ state: 'visible', timeout: 20000 });
       await page.screenshot({ path: 'paso-derecha.png', fullPage: true });
       console.log('📸 Captura guardada: paso-derecha.png');
     } catch (e) {
       console.log('⚠️ No se detectó explícitamente el texto "derecha", continuando...');
     }
 
-    // Esperar y capturar cuando aparezca el texto de finalización ("estimando" o similar)
+    // Esperar y capturar cuando aparezca el texto de finalización ("estimando")
     try {
       console.log('⏳ Esperando texto "estimando"...');
-      await personaFrame.getByText(/estimando/i).first().waitFor({ state: 'visible', timeout: 25000 });
+      await page.getByText(/estimando/i).first().waitFor({ state: 'visible', timeout: 25000 });
       await page.screenshot({ path: 'paso-estimando.png', fullPage: true });
       console.log('📸 Captura guardada: paso-estimando.png');
       console.log('✅ Proceso de verificación de edad finalizado correctamente.');
     } catch (e) {
-      // Captura de respaldo por si el texto varía ligeramente
       await page.screenshot({ path: 'paso-transmision-webrtc.png', fullPage: true });
       console.log('📸 Captura de respaldo guardada: paso-transmision-webrtc.png');
     }
