@@ -28,9 +28,13 @@ jobs:
 
       - name: Check video
         run: |
-          echo "Comprobando vídeo..."
-          test -f videos/video1.mp4
-          ls -lh videos/video1.mp4
+          echo "Comprobando vídeo en la carpeta de workflows..."
+          test -f .github/workflows/video1.mp4
+          ls -lh .github/workflows/video1.mp4
+
+      - name: Descargar o preparar video MP4 del repositorio
+        run: |    
+          ffmpeg -i .github/workflows/video1.mp4 -pix_fmt yuv420p video-captura.y4m
 
       - name: Run Roblox automation
         env:
@@ -57,7 +61,3 @@ jobs:
           name: screenshots-proceso
           path: scripts/*.png
           if-no-files-found: ignore
-
-      - name: Descargar o preparar video MP4 del repositorio
-        run: |    
-          ffmpeg -i video1.mp4 -pix_fmt yuv420p video-captura.y4m
