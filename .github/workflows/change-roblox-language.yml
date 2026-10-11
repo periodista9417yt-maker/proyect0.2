@@ -1,66 +1,66 @@
-name: Roblox Playwright Automation
+ name: Roblox Playwright Automation
 
-on:
-  workflow_dispatch:
+ on:
+   workflow_dispatch:
 
-jobs:
-  roblox:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+ jobs:
+   roblox:
+     runs-on: ubuntu-latest
+     timeout-minutes: 30
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+     steps:
+       - name: Checkout repository
+         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
+       - name: Setup Node.js
+         uses: actions/setup-node@v4
+         with:
+           node-version: 20
+           cache: npm
 
-      - name: Install npm dependencies & Stealth
-        run: |
-          npm install
-          npm install playwright-extra puppeteer-extra-plugin-stealth
+       - name: Install npm dependencies & Stealth
+         run: |
+           npm install
+           npm install playwright-extra puppeteer-extra-plugin-stealth
 
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+       - name: Install Playwright Chromium
+         run: npx playwright install --with-deps chromium
 
-      - name: Instalar FFmpeg y convertir video MP4 a Y4M
-        run: |
-          echo "➡️ Instalando FFmpeg..."
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+       - name: Instalar FFmpeg y convertir video MP4 a Y4M
+         run: |
+           echo "➡️ Instalando FFmpeg..."
+           sudo apt-get update && sudo apt-get install -y ffmpeg
           
-          echo "➡️ Comprobando vídeo en la carpeta videos/..."
-          test -f videos/video1.mp4
-          ls -lh videos/video1.mp4
+           echo "➡️ Comprobando vídeo en la carpeta videos/..."
+           test -f videos/video1.mp4
+           ls -lh videos/video1.mp4
 
-          echo "➡️ Convirtiendo MP4 a Y4M (requerido para WebRTC en Chromium)..."
-          ffmpeg -i videos/video1.mp4 -pix_fmt yuv420p video-captura.y4m
-          ls -lh video-captura.y4m
+           echo "➡️ Convirtiendo MP4 a Y4M (requerido para WebRTC en Chromium)..."
+           ffmpeg -i videos/video1.mp4 -pix_fmt yuv420p video-captura.y4m
+           ls -lh video-captura.y4m
 
-      - name: Run Roblox automation
-        env:
-          ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
-        run: |
-          node change-language.js
+       - name: Run Roblox automation
+         env:
+           ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
+         run: |
+           node change-language.js
 
-      - name: Upload execution artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: roblox-automation-results
-          path: |
-            injected-video-screenshot.png
-            success-screenshot.png
-            error-screenshot.png
-            error-page.html
-          if-no-files-found: ignore
+       - name: Upload execution artifacts
+         if: always()
+         uses: actions/upload-artifact@v4
+         with:
+           name: roblox-automation-results
+           path: |
+             injected-video-screenshot.png
+             success-screenshot.png
+             error-screenshot.png
+             error-page.html
+           if-no-files-found: ignore
           
-      - name: Subir capturas del proceso
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots-proceso
-          path: *.png
-          if-no-files-found: ignore
+       - name: Subir capturas del proceso
+         if: always()
+         uses: actions/upload-artifact@v4
+         with:
+           name: screenshots-proceso
+           path: *.png
+           if-no-files-found: ignore
