@@ -26,15 +26,18 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Check video
+      - name: Instalar FFmpeg y convertir video MP4 a Y4M
         run: |
-          echo "Comprobando vídeo en la carpeta de workflows..."
-          test -f .github/workflows/video1.mp4
-          ls -lh .github/workflows/video1.mp4
+          echo "➡️ Instalando FFmpeg..."
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          
+          echo "➡️ Comprobando vídeo en la carpeta videos/..."
+          test -f videos/video1.mp4
+          ls -lh videos/video1.mp4
 
-      - name: Descargar o preparar video MP4 del repositorio
-        run: |    
-          ffmpeg -i .github/workflows/video1.mp4 -pix_fmt yuv420p video-captura.y4m
+          echo "➡️ Convirtiendo MP4 a Y4M (requerido para WebRTC en Chromium)..."
+          ffmpeg -i videos/video1.mp4 -pix_fmt yuv420p video-captura.y4m
+          ls -lh video-captura.y4m
 
       - name: Run Roblox automation
         env:
@@ -59,5 +62,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: screenshots-proceso
-          path: scripts/*.png
+          path: *.png
           if-no-files-found: ignore
