@@ -53,5 +53,4 @@ jobs:
           path: |
             *.png
             *.html
-            video-captura.y4m
           if-no-files-found: ignore
