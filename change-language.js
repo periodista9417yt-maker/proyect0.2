@@ -57,6 +57,25 @@ async function main() {
     await page.goto(ACCOUNT_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
     await page.waitForTimeout(3000);
+
+        // -------------------------------------------------------------------------
+    // SALTAR PANTALLA INTERMEDIA DE APP MÓVIL
+    // -------------------------------------------------------------------------
+    const continueInBrowserButton = page.locator(
+      'button:has-text("Continue in browser"), [role="button"]:has-text("Continue in browser"), a:has-text("Continue in browser"), ' +
+      'button:has-text("Continuar en el navegador"), [role="button"]:has-text("Continuar en el navegador"), a:has-text("Continuar en el navegador")'
+    ).first();
+
+    if (await continueInBrowserButton.count() > 0 && await continueInBrowserButton.isVisible()) {
+      console.log('📱 Se detectó la pantalla intermedia móvil. Presionando "Continue in browser"...');
+      await continueInBrowserButton.click({ force: true });
+      await page.waitForTimeout(3000); // Esperamos a que cargue el contenido real de la cuenta
+    }
+
+    // -------------------------------------------------------------------------
+    // VERIFICACIÓN DE SESIÓN
+    // -------------------------------------------------------------------------
+  
     if (page.url().includes('/login')) {
       throw new Error('La cookie .ROBLOSECURITY parece inválida o expirada: Roblox redirigió a /login.');
     }
