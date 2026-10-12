@@ -1,4 +1,91 @@
-    // -------------------------------------------------------------------------
+// change-language.js
+const { chromium } = require('playwright');
+const path = require('path');
+const fs = require('fs');
+
+const TARGET_LANGUAGE_LABEL = 'Español (España)';
+const ACCOUNT_URL = 'https://www.roblox.com/es/my/account#!/info';
+
+async function main() {
+  const cookieValue = process.env.ROBLOSECURITY;
+
+  if (!cookieValue) {
+    console.error('❌ No se encontró la variable de entorno ROBLOSECURITY.');
+    process.exit(1);
+  }
+
+  const videoPath = path.resolve(__dirname, 'video-captura.y4m');
+  if (!fs.existsSync(videoPath)) {
+    console.warn('⚠️ No se encontró el archivo .y4m localmente, asegúrate de convertir tu .mp4 a .y4m en el workflow.');
+  }
+
+  const browser = await chromium.launch({
+    headless: true,
+    args: [
+      '--use-fake-ui-for-media-stream',
+      '--use-fake-device-for-media-stream',
+      `--use-file-for-fake-video-capture=${videoPath}`,
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+    ],
+  });
+
+  const context = await browser.newContext({
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+      '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    locale: 'es-ES',
+    permissions: ['camera'],
+  });
+
+  await context.addCookies([
+    {
+      name: '.ROBLOSECURITY',
+      value: cookieValue,
+      domain: '.roblox.com',
+      path: '/',
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Lax',
+    },
+  ]);
+
+  const page = await context.newPage();
+
+  try {
+    console.log('➡️ Abriendo página de cuenta...');
+    await page.goto(ACCOUNT_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+    await page.waitForTimeout(3000);
+    if (page.url().includes('/login')) {
+      throw new Error('La cookie .ROBLOSECURITY parece inválida o expirada: Roblox redirigió a /login.');
+    }
+
+    console.log('✅ Sesión iniciada correctamente.');
+    console.log('➡️ Buscando selector de idioma...');
+
+    const nativeSelect = page.locator('select').filter({ hasText: 'Español' }).first();
+
+    if (await nativeSelect.count() > 0) {
+      await nativeSelect.selectOption({ label: TARGET_LANGUAGE_LABEL });
+      console.log(`✅ Idioma cambiado a "${TARGET_LANGUAGE_LABEL}" (selector nativo).`);
+    } else {
+      const dropdownTrigger = page.locator(
+        '[class*="language"] button, [class*="Language"] button, [data-testid*="language"]'
+      ).first();
+
+      await dropdownTrigger.click({ timeout: 10000 });
+      await page.waitForTimeout(1000);
+
+      const option = page.getByText(TARGET_LANGUAGE_LABEL, { exact: true }).first();
+      option.click({ timeout: 10000 }).catch(() => {});
+
+      console.log(`✅ Idioma cambiado a "${TARGET_LANGUAGE_LABEL}" (dropdown personalizado).`);
+    }
+
+    await page.waitForTimeout(2000);
+
+       // -------------------------------------------------------------------------
     // CÁMARA Y DIÁLOGOS DE PERSONA (DENTRO DE IFRAME)
     // -------------------------------------------------------------------------
     console.log('➡️ Buscando y haciendo clic en "Continuar con la cámara"...');
@@ -70,3 +157,14 @@
       await page.screenshot({ path: 'paso-transmision-webrtc.png', fullPage: true });
       console.log('📸 Captura de respaldo guardada: paso-transmision-webrtc.png');
     }
+
+  } catch (err) {
+    console.error('❌ Error durante la automatización:', err.message);
+    await page.screenshot({ path: 'error-screenshot.png', fullPage: true }).catch(() => {});
+    process.exitCode = 1;
+  } finally {
+    await browser.close();
+  }
+}
+
+main();
