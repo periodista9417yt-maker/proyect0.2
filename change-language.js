@@ -146,7 +146,7 @@ async function main() {
 
     try {
       console.log('⏳ Esperando texto "izquierda"...');
-      await personaFrame.getByText(/izquierda/i).first().waitFor({ state: 'visible', timeout: 20000 });
+      await personaFrame.getByText(/izquierda/i).first().waitFor({ state: 'visible', timeout: 25000 });
       await page.screenshot({ path: 'paso-izquierda.png', fullPage: true });
       console.log('📸 Captura guardada: paso-izquierda.png');
     } catch (e) {
@@ -155,7 +155,7 @@ async function main() {
 
     try {
       console.log('⏳ Esperando texto "derecha"...');
-      await personaFrame.getByText(/derecha/i).first().waitFor({ state: 'visible', timeout: 20000 });
+      await personaFrame.getByText(/derecha/i).first().waitFor({ state: 'visible', timeout: 23000 });
       await page.screenshot({ path: 'paso-derecha.png', fullPage: true });
       console.log('📸 Captura guardada: paso-derecha.png');
     } catch (e) {
@@ -164,7 +164,7 @@ async function main() {
 
     try {
       console.log('⏳ Esperando texto "estimando"...');
-      await personaFrame.getByText(/estimando/i).first().waitFor({ state: 'visible', timeout: 25000 });
+      await personaFrame.getByText(/estimando/i).first().waitFor({ state: 'visible', timeout: 26000 });
       await page.screenshot({ path: 'paso-estimando.png', fullPage: true });
       console.log('📸 Captura guardada: paso-estimando.png');
       console.log('✅ Proceso de verificación de edad finalizado correctamente.');
