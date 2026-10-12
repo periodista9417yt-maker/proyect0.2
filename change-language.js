@@ -1,10 +1,9 @@
-// change-language.js
-const { chromium } = require('playwright');
+const { chromium, devices } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
 const TARGET_LANGUAGE_LABEL = 'Español (España)';
-const ACCOUNT_URL = 'https://www.roblox.com/es/my/account#!/info';
+const ACCOUNT_URL = 'https://roblox.com';
 
 async function main() {
   const cookieValue = process.env.ROBLOSECURITY;
@@ -30,10 +29,11 @@ async function main() {
     ],
   });
 
+  // Seleccionamos un perfil móvil del registro de Playwright
+  const mobileDevice = devices['Pixel 7'];
+
   const context = await browser.newContext({
-    userAgent:
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-      '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    ...mobileDevice, // Emula viewport, userAgent, isMobile, hasTouch, etc.
     locale: 'es-ES',
     permissions: ['camera'],
   });
@@ -61,7 +61,7 @@ async function main() {
       throw new Error('La cookie .ROBLOSECURITY parece inválida o expirada: Roblox redirigió a /login.');
     }
 
-    console.log('✅ Sesión iniciada correctamente.');
+    console.log('✅ Sesión iniciada correctamente (Modo Móvil).');
     console.log('➡️ Buscando selector de idioma...');
 
     const nativeSelect = page.locator('select').filter({ hasText: 'Español' }).first();
@@ -78,28 +78,27 @@ async function main() {
       await page.waitForTimeout(1000);
 
       const option = page.getByText(TARGET_LANGUAGE_LABEL, { exact: true }).first();
-      option.click({ timeout: 10000 }).catch(() => {});
+      await option.click({ timeout: 10000 }).catch(() => {});
 
       console.log(`✅ Idioma cambiado a "${TARGET_LANGUAGE_LABEL}" (dropdown personalizado).`);
     }
 
     await page.waitForTimeout(2000);
 
-       // -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // CÁMARA Y DIÁLOGOS DE PERSONA (DENTRO DE IFRAME)
     // -------------------------------------------------------------------------
     console.log('➡️ Buscando y haciendo clic en "Continuar con la cámara"...');
     const cameraButton = page.locator('button:has-text("Continuar con la cámara"), [role="button"]:has-text("Continuar con la cámara")').first();
     await cameraButton.waitFor({ state: 'visible', timeout: 15000 });
+    // En entornos móviles usamos tap() si está disponible, o click() forzado
     await cameraButton.click({ force: true });
     console.log('✅ Botón "Continuar con la cámara" presionado.');
 
-    console.log('➡️ Esperando a que cargue el iframe de Persona...');
-    // Esperamos a que el iframe de Persona aparezca en la página
+    console.log('➡️ Esperando a que aparezca el diálogo de Persona...');
     const iframeElement = page.locator('iframe[src*="withpersona.com"], iframe[title*="Persona"]').first();
     await iframeElement.waitFor({ state: 'attached', timeout: 15000 });
     
-    // Cambiamos el contexto de ejecución al interior del iframe
     const personaFrame = page.frameLocator('iframe[src*="withpersona.com"], iframe[title*="Persona"]').first();
 
     // Primer botón "Continuar" dentro del iframe de Persona
@@ -114,7 +113,7 @@ async function main() {
     console.log('✅ Primer botón "Continuar" presionado.');
 
     // Segundo botón "Continuar" dentro del iframe de Persona
-    console.log('➡️ Esperando el siguiente paso dentro de Persona y haciendo clic en "Continuar"...');
+    console.log('➡️ Esperando el siguiente paso y haciendo clic nuevamente en "Continuar"...');
     await page.waitForTimeout(2000);
     const secondContinueButton = personaFrame.locator('button:has-text("Continuar"), [role="button"]:has-text("Continuar")').first();
     await secondContinueButton.waitFor({ state: 'visible', timeout: 15000 });
@@ -124,9 +123,8 @@ async function main() {
     // -------------------------------------------------------------------------
     // TRANSMISIÓN WEBRTC Y CAPTURAS POR TEXTO ("izquierda", "derecha", "estimando")
     // -------------------------------------------------------------------------
-    console.log('➡️ Monitoreando transmisión WebRTC y textos dentro del iframe...');
+    console.log('➡️ Monitoreando transmisión WebRTC y textos en pantalla...');
 
-    // Esperar y capturar cuando aparezca el texto "izquierda" (dentro del iframe)
     try {
       console.log('⏳ Esperando texto "izquierda"...');
       await personaFrame.getByText(/izquierda/i).first().waitFor({ state: 'visible', timeout: 20000 });
@@ -136,7 +134,6 @@ async function main() {
       console.log('⚠️ No se detectó explícitamente el texto "izquierda", continuando...');
     }
 
-    // Esperar y capturar cuando aparezca el texto "derecha" (dentro del iframe)
     try {
       console.log('⏳ Esperando texto "derecha"...');
       await personaFrame.getByText(/derecha/i).first().waitFor({ state: 'visible', timeout: 20000 });
@@ -146,7 +143,6 @@ async function main() {
       console.log('⚠️ No se detectó explícitamente el texto "derecha", continuando...');
     }
 
-    // Esperar y capturar cuando aparezca el texto de finalización ("estimando" o similar en la página o iframe)
     try {
       console.log('⏳ Esperando texto "estimando"...');
       await personaFrame.getByText(/estimando/i).first().waitFor({ state: 'visible', timeout: 25000 });
