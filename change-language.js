@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const TARGET_LANGUAGE_LABEL = 'Español (España)';
-const ACCOUNT_URL = 'https://roblox.com';
+const ACCOUNT_URL = 'https://www.roblox.com/my/account#!/info';
 
 async function main() {
   const cookieValue = process.env.ROBLOSECURITY;
