@@ -120,16 +120,25 @@ async function main() {
     
     const personaFrame = page.frameLocator('iframe[src*="withpersona.com"], iframe[title*="Persona"]').first();
 
-    // Primer botón "Continuar" dentro del iframe de Persona
-    console.log('➡️ Buscando el primer botón "Continuar" dentro de Persona...');
-    const firstContinueButton = personaFrame.locator('button:has-text("Continuar"), [role="button"]:has-text("Continuar")').first();
-    await firstContinueButton.waitFor({ state: 'visible', timeout: 20000 });
+        // Primer botón "Continuar" dentro del iframe de Persona
+    console.log('➡️ Buscando el botón azul de "Continuar" dentro de Persona...');
+    
+    // Filtramos estrictamente por elementos interactivos reales ('button') o con rol de botón y texto exacto
+    const firstContinueButton = personaFrame.locator(
+      'button:has-text("Continuar"), [role="button"]:has-text("Continuar")'
+    ).filter({ has: page.locator('*:not(p):not(span):not(div)') }).first();
+
+    // Alternativa ultra precisa basada en la estructura clásica de Persona:
+    const strictPersonaButton = personaFrame.locator('button, [role="button"]').filter({ hasText: /^Continuar$/ }).first();
+
+    await strictPersonaButton.waitFor({ state: 'visible', timeout: 20000 });
     
     await page.screenshot({ path: 'paso-primer-continuar.png', fullPage: true });
     console.log('📸 Captura guardada: paso-primer-continuar.png');
 
-    await firstContinueButton.click({ force: true });
-    console.log('✅ Primer botón "Continuar" presionado.');
+    await strictPersonaButton.click({ force: true });
+    console.log('✅ Botón azul "Continuar" presionado correctamente.');
+
 
     // Segundo botón "Continuar" dentro del iframe de Persona
     console.log('➡️ Esperando el siguiente paso y haciendo clic nuevamente en "Continuar"...');
