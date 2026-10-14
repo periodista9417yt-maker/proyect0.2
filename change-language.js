@@ -142,7 +142,7 @@ async function main() {
 
     // Segundo botón "Continuar" dentro del iframe de Persona
     console.log('➡️ Esperando el siguiente paso y haciendo clic nuevamente en "Continuar"...');
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
     const secondContinueButton = personaFrame.locator('button, [role="button"]').filter({ hasText: /^Continuar$/ }).first();
     await secondContinueButton.waitFor({ state: 'visible', timeout: 15000 });
     await secondContinueButton.click({ force: true });
