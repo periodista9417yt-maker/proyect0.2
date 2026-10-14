@@ -174,9 +174,11 @@ async function main() {
     try {
       console.log('⏳ Esperando texto "estimando"...');
       await personaFrame.getByText(/estimando/i).first().waitFor({ state: 'visible', timeout: 26000 });
-      await page.screenshot({ path: 'paso-estimando.png', fullPage: true });
+      await page.waitForTimeout(12000);
+      await page.screenshot({ path: 'paso-estimando.png', fullPage: true });   
       console.log('📸 Captura guardada: paso-estimando.png');
       console.log('✅ Proceso de verificación de edad finalizado correctamente.');
+  
     } catch (e) {
       await page.screenshot({ path: 'paso-transmision-webrtc.png', fullPage: true });
       console.log('📸 Captura de respaldo guardada: paso-transmision-webrtc.png');
