@@ -17,7 +17,7 @@ async function main() {
     console.error('❌ No se encontró la variable de entorno ROBLOSECURITY.');
     process.exit(1);
   }
-
+ const videoPath = path.resolve(__dirname, 'video-captura.y4m');
   // Lanzamiento del navegador utilizando la cámara física virtual del sistema operativo
   const browser = await chromium.launch({
     headless: true,
