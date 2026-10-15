@@ -132,7 +132,7 @@ async function main() {
     await iframeElement.waitFor({ state: 'attached', timeout: 15000 });
     
     const personaFrame = page.frameLocator('iframe[src*="withpersona.com"], iframe[title*="Persona"]').first();
-
+ await page.waitForTimeout(3000);
     console.log('➡️ Buscando el botón azul de "Continuar" dentro de Persona...');
     const strictPersonaButton = personaFrame.locator('button, [role="button"]').filter({ hasText: /^Continuar\$/ }).first();
 
