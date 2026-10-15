@@ -18,7 +18,7 @@ async function main() {
     console.warn('⚠️ No se encontró el archivo .y4m localmente.');
   }
 
-  // 2. Lanzamos Chromium con flags limpios de WebRTC y evasión nativa
+  // Lanzamos Chromium con flags limpios de WebRTC y evasión nativa
   const browser = await chromium.launch({
     headless: true,
     args: [
@@ -27,9 +27,7 @@ async function main() {
       `--use-file-for-fake-video-capture=${videoPath}`,
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      // Evita exponer que el navegador es controlado por un software automatizado
       '--disable-blink-features=AutomationControlled',
-      // Forzar codificación y decodificación de video por software para asegurar WebRTC estable en CI/CD
       '--disable-gpu',
       '--use-glnext-for-testing'
     ],
@@ -37,16 +35,31 @@ async function main() {
 
   const mobileDevice = devices['Pixel 7'];
 
-  // 3. Modificamos el contexto para asegurar que los permisos multimedia se hereden correctamente
+  // Modificamos el contexto para asegurar que los permisos multimedia se hereden correctamente
   const context = await browser.newContext({
     ...mobileDevice,
     locale: 'es-ES',
     timezoneId: 'Europe/Madrid',
-    permissions: ['camera'], // Asegura el acceso directo del hardware simulado
+    permissions: ['camera'], 
     extraHTTPHeaders: {
       'Accept-Language': 'es-ES,es;q=0.9'
     }
   });
+
+  // -------------------------------------------------------------------------
+  // SOLUCIÓN: INYECTAR LA COOKIE .ROBLOSECURITY DE NUEVO EN EL CONTEXTO
+  // -------------------------------------------------------------------------
+  await context.addCookies([
+    {
+      name: '.ROBLOSECURITY',
+      value: cookieValue,
+      domain: '.roblox.com',
+      path: '/',
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Lax',
+    },
+  ]);
 
   // Reinyectar propiedad para limpiar el rastro de automatización remanente de manera limpia
   const page = await context.newPage();
@@ -54,14 +67,13 @@ async function main() {
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
   });
 
-  
   try {
     console.log('➡️ Abriendo página de cuenta...');
     await page.goto(ACCOUNT_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
     await page.waitForTimeout(3000);
 
-        // -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // SALTAR PANTALLA INTERMEDIA DE APP MÓVIL
     // -------------------------------------------------------------------------
     const continueInBrowserButton = page.locator(
@@ -72,13 +84,12 @@ async function main() {
     if (await continueInBrowserButton.count() > 0 && await continueInBrowserButton.isVisible()) {
       console.log('📱 Se detectó la pantalla intermedia móvil. Presionando "Continue in browser"...');
       await continueInBrowserButton.click({ force: true });
-      await page.waitForTimeout(3000); // Esperamos a que cargue el contenido real de la cuenta
+      await page.waitForTimeout(3000); 
     }
 
     // -------------------------------------------------------------------------
     // VERIFICACIÓN DE SESIÓN
     // -------------------------------------------------------------------------
-  
     if (page.url().includes('/login')) {
       throw new Error('La cookie .ROBLOSECURITY parece inválida o expirada: Roblox redirigió a /login.');
     }
@@ -113,7 +124,6 @@ async function main() {
     console.log('➡️ Buscando y haciendo clic en "Continuar con la cámara"...');
     const cameraButton = page.locator('button:has-text("Continuar con la cámara"), [role="button"]:has-text("Continuar con la cámara")').first();
     await cameraButton.waitFor({ state: 'visible', timeout: 15000 });
-    // En entornos móviles usamos tap() si está disponible, o click() forzado
     await cameraButton.click({ force: true });
     console.log('✅ Botón "Continuar con la cámara" presionado.');
 
@@ -123,16 +133,8 @@ async function main() {
     
     const personaFrame = page.frameLocator('iframe[src*="withpersona.com"], iframe[title*="Persona"]').first();
 
-        // Primer botón "Continuar" dentro del iframe de Persona
     console.log('➡️ Buscando el botón azul de "Continuar" dentro de Persona...');
-    
-    // Filtramos estrictamente por elementos interactivos reales ('button') o con rol de botón y texto exacto
-    const firstContinueButton = personaFrame.locator(
-      'button:has-text("Continuar"), [role="button"]:has-text("Continuar")'
-    ).filter({ has: page.locator('*:not(p):not(span):not(div)') }).first();
-
-    // Alternativa ultra precisa basada en la estructura clásica de Persona:
-    const strictPersonaButton = personaFrame.locator('button, [role="button"]').filter({ hasText: /^Continuar$/ }).first();
+    const strictPersonaButton = personaFrame.locator('button, [role="button"]').filter({ hasText: /^Continuar\$/ }).first();
 
     await strictPersonaButton.waitFor({ state: 'visible', timeout: 20000 });
     
@@ -142,17 +144,15 @@ async function main() {
     await strictPersonaButton.click({ force: true });
     console.log('✅ Botón azul "Continuar" presionado correctamente.');
 
-
-    // Segundo botón "Continuar" dentro del iframe de Persona
     console.log('➡️ Esperando el siguiente paso y haciendo clic nuevamente en "Continuar"...');
     await page.waitForTimeout(5000);
-    const secondContinueButton = personaFrame.locator('button, [role="button"]').filter({ hasText: /^Continuar$/ }).first();
+    const secondContinueButton = personaFrame.locator('button, [role="button"]').filter({ hasText: /^Continuar\$/ }).first();
     await secondContinueButton.waitFor({ state: 'visible', timeout: 15000 });
     await secondContinueButton.click({ force: true });
     console.log('✅ Segundo botón "Continuar" presionado.');
 
     // -------------------------------------------------------------------------
-    // TRANSMISIÓN WEBRTC Y CAPTURAS POR TEXTO ("izquierda", "derecha", "estimando")
+    // TRANSMISIÓN WEBRTC Y CAPTURAS POR TEXTO
     // -------------------------------------------------------------------------
     console.log('➡️ Monitoreando transmisión WebRTC y textos en pantalla...');
 
