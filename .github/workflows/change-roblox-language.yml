@@ -26,18 +26,26 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Instalar FFmpeg y convertir video MP4 a Y4M
+      - name: Configurar Cámara Virtual con v4l2loopback y FFmpeg
         run: |
-          echo "➡️ Instalando FFmpeg..."
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          echo "➡️ Instalando utilidades de video y FFmpeg..."
+          sudo apt-get update && sudo apt-get install -y ffmpeg v4l2loopback-dkms v4l2loopback-utils
          
           echo "➡️ Comprobando vídeo en la carpeta videos/..."
           test -f videos/video1.mp4
           ls -lh videos/video1.mp4
 
-          echo "➡️ Convirtiendo MP4 a Y4M (requerido para WebRTC en Chromium)..."
-          ffmpeg -i videos/video1.mp4 -pix_fmt yuv420p video-captura.y4m
-          ls -lh video-captura.y4m
+          echo "➡️ Cargando módulo del kernel para la cámara virtual..."
+          # Crea el dispositivo /dev/video0 simulando una cámara web integrada
+          sudo modprobe v4l2loopback devices=1 video_nr=0 card_label="Integrated Webcam" exclusive_caps=1
+
+          echo "➡️ Transmitiendo MP4 en bucle continuo a la cámara virtual..."
+          # El parámetro -stream_loop -1 hace que el video se repita si el proceso tarda
+          # Se envía a /dev/video0 en segundo plano (&) para que el workflow continúe
+          ffmpeg -re -stream_loop -1 -i videos/video1.mp4 -f v4l2 -pix_fmt yuv420p /dev/video0 &
+          
+          echo "➡️ Esperando 3 segundos para estabilizar el flujo multimedia..."
+          sleep 3
 
       - name: Run Roblox automation
         env:
