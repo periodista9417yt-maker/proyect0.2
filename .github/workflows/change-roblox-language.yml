@@ -26,26 +26,21 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Configurar Cámara Virtual con v4l2loopback y FFmpeg
+      # Volvemos a generar el archivo .y4m pero optimizado milimétricamente
+      - name: Instalar FFmpeg y convertir video MP4 a Y4M de alta fidelidad
         run: |
-          echo "➡️ Instalando utilidades de video y FFmpeg..."
-          sudo apt-get update && sudo apt-get install -y ffmpeg v4l2loopback-dkms v4l2loopback-utils
+          echo "➡️ Instalando FFmpeg..."
+          sudo apt-get update && sudo apt-get install -y ffmpeg
          
           echo "➡️ Comprobando vídeo en la carpeta videos/..."
           test -f videos/video1.mp4
           ls -lh videos/video1.mp4
 
-          echo "➡️ Cargando módulo del kernel para la cámara virtual..."
-          # Crea el dispositivo /dev/video0 simulando una cámara web integrada
-          sudo modprobe v4l2loopback devices=1 video_nr=0 card_label="Integrated Webcam" exclusive_caps=1
-
-          echo "➡️ Transmitiendo MP4 en bucle continuo a la cámara virtual..."
-          # El parámetro -stream_loop -1 hace que el video se repita si el proceso tarda
-          # Se envía a /dev/video0 en segundo plano (&) para que el workflow continúe
-          ffmpeg -re -stream_loop -1 -i videos/video1.mp4 -f v4l2 -pix_fmt yuv420p /dev/video0 &
-          
-          echo "➡️ Esperando 3 segundos para estabilizar el flujo multimedia..."
-          sleep 3
+          echo "➡️ Convirtiendo MP4 a Y4M con framerate constante (30 fps) y formato YUV420P nativo..."
+          # -r 30 asegura que no existan micro-saltos de FPS que delaten el bot
+          # -vsync cfr fuerza una sincronización constante de cuadros requerida por WebRTC
+          ffmpeg -i videos/video1.mp4 -r 30 -vsync cfr -pix_fmt yuv420p video-captura.y4m
+          ls -lh video-captura.y4m
 
       - name: Run Roblox automation
         env:
