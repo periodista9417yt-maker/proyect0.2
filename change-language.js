@@ -135,9 +135,11 @@ async function main() {
  await page.waitForTimeout(3000);
     console.log('➡️ Buscando el botón azul de "Continuar" dentro de Persona...');
       
-    const strictPersonaButton = personaFrame.locator(
+    const firstContinueButton = personaFrame.locator(
       'button:has-text("Continuar"), [role="button"]:has-text("Continuar")'
     ).filter({ has: page.locator('*:not(p):not(span):not(div)') }).first();
+    
+    const strictPersonaButton = personaFrame.locator('button, [role="button"]').filter({ hasText: /^Continuar$/ }).first();
 
     await strictPersonaButton.waitFor({ state: 'visible', timeout: 20000 });
     
