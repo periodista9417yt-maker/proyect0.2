@@ -1,6 +1,11 @@
-const { chromium, devices } = require('playwright');
+// REEMPLAZA las primeras líneas de tu archivo por estas:
+const { chromium } = require('playwright-extra'); // Cambiado para usar el ecosistema extra
+const stealth = require('puppeteer-extra-plugin-stealth')();
 const path = require('path');
 const fs = require('fs');
+
+// Aplicamos el plugin de sigilo globalmente antes de lanzar Chromium
+chromium.use(stealth);
 
 const TARGET_LANGUAGE_LABEL = 'Español (España)';
 const ACCOUNT_URL = 'https://www.roblox.com/my/account#!/info';
@@ -13,19 +18,15 @@ async function main() {
     process.exit(1);
   }
 
-  const videoPath = path.resolve(__dirname, 'video-captura.y4m');
-  if (!fs.existsSync(videoPath)) {
-    console.warn('⚠️ No se encontró el archivo .y4m localmente, asegúrate de convertir tu .mp4 a .y4m en el workflow.');
-  }
-
+  // Lanzamiento del navegador utilizando la cámara física virtual del sistema operativo
   const browser = await chromium.launch({
     headless: true,
     args: [
-      '--use-fake-ui-for-media-stream',
-      '--use-fake-device-for-media-stream',
-      `--use-file-for-fake-video-capture=${videoPath}`,
+      '--use-fake-ui-for-media-stream',     // Otorga permisos automáticos a la cámara sin lanzar popups
+      '--use-fake-device-for-media-stream', // Permite inicializar streams sin cámaras físicas reales
       '--no-sandbox',
       '--disable-setuid-sandbox',
+      '--disable-blink-features=AutomationControlled' // Remueve el flag de automatización 'navigator.webdriver'
     ],
   });
 
