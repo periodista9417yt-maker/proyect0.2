@@ -1,11 +1,6 @@
-const { chromium } = require('playwright-extra'); 
-const { devices } = require('playwright'); // ◄ Traemos los perfiles de dispositivos desde el core nativo
-const stealth = require('puppeteer-extra-plugin-stealth')();
+const { chromium, devices } = require('playwright'); 
 const path = require('path');
 const fs = require('fs');
-
-// Aplicamos el plugin de sigilo antes de lanzar Chromium
-chromium.use(stealth);
 
 const TARGET_LANGUAGE_LABEL = 'Español (España)';
 const ACCOUNT_URL = 'https://www.roblox.com/my/account#!/info';
@@ -20,9 +15,10 @@ async function main() {
 
   const videoPath = path.resolve(__dirname, 'video-captura.y4m');
   if (!fs.existsSync(videoPath)) {
-    console.warn('⚠️ No se encontró el archivo .y4m localmente, asegúrate de convertir tu .mp4 a .y4m en el workflow.');
+    console.warn('⚠️ No se encontró el archivo .y4m localmente.');
   }
 
+  // 2. Lanzamos Chromium con flags limpios de WebRTC y evasión nativa
   const browser = await chromium.launch({
     headless: true,
     args: [
@@ -31,33 +27,34 @@ async function main() {
       `--use-file-for-fake-video-capture=${videoPath}`,
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      '--disable-blink-features=AutomationControlled'
+      // Evita exponer que el navegador es controlado por un software automatizado
+      '--disable-blink-features=AutomationControlled',
+      // Forzar codificación y decodificación de video por software para asegurar WebRTC estable en CI/CD
+      '--disable-gpu',
+      '--use-glnext-for-testing'
     ],
   });
 
-  // Seleccionamos el perfil móvil correctamente importado
   const mobileDevice = devices['Pixel 7'];
 
+  // 3. Modificamos el contexto para asegurar que los permisos multimedia se hereden correctamente
   const context = await browser.newContext({
-    ...mobileDevice, // Emula viewport, userAgent, isMobile, hasTouch, etc.
+    ...mobileDevice,
     locale: 'es-ES',
-    permissions: ['camera'],
+    timezoneId: 'Europe/Madrid',
+    permissions: ['camera'], // Asegura el acceso directo del hardware simulado
+    extraHTTPHeaders: {
+      'Accept-Language': 'es-ES,es;q=0.9'
+    }
   });
 
-  await context.addCookies([
-    {
-      name: '.ROBLOSECURITY',
-      value: cookieValue,
-      domain: '.roblox.com',
-      path: '/',
-      httpOnly: true,
-      secure: true,
-      sameSite: 'Lax',
-    },
-  ]);
-
+  // Reinyectar propiedad para limpiar el rastro de automatización remanente de manera limpia
   const page = await context.newPage();
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+  });
 
+  
   try {
     console.log('➡️ Abriendo página de cuenta...');
     await page.goto(ACCOUNT_URL, { waitUntil: 'domcontentloaded', timeout: 60000 });
