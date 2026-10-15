@@ -23,7 +23,8 @@ async function main() {
     headless: true,
     args: [
       '--use-fake-ui-for-media-stream',     // Otorga permisos automáticos a la cámara sin lanzar popups
-      '--use-fake-device-for-media-stream', // Permite inicializar streams sin cámaras físicas reales
+      '--use-fake-device-for-media-stream', // Permite inicializar streams sin cámaras físicas reales       
+      '--use-file-for-fake-video-capture=${videoPath}',
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled' // Remueve el flag de automatización 'navigator.webdriver'
