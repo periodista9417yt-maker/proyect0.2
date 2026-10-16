@@ -150,7 +150,7 @@ async function main() {
     console.log('✅ Botón azul "Continuar" presionado correctamente.');
 
     console.log('➡️ Esperando el siguiente paso y haciendo clic nuevamente en "Continuar"...');
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(8000);
     const secondContinueButton = personaFrame.locator('button, [role="button"]').filter({ hasText: /^Continuar\$/ }).first();
     await secondContinueButton.waitFor({ state: 'visible', timeout: 15000 });
     await secondContinueButton.click({ force: true });
