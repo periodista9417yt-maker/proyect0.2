@@ -18,6 +18,15 @@ jobs:
           node-version: 20
           cache: npm
 
+
+
+      - name: Run Roblox automation
+        env:
+          ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
+        run: |
+          xvfb-run --server-args="-screen 0 1280x1024x24" node change-language.js
+
+
       - name: Install npm dependencies & Stealth
         run: |
           npm install
@@ -48,11 +57,6 @@ jobs:
           node change-language.js
      
       
-      - name: Run Roblox automation
-        env:
-          ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
-        run: |
-          xvfb-run --server-args="-screen 0 1280x1024x24" node change-language.js
 
           
       - name: Upload execution artifacts and screenshots
