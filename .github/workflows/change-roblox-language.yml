@@ -18,15 +18,6 @@ jobs:
           node-version: 20
           cache: npm
 
-
-
-      - name: Run Roblox automation
-        env:
-          ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
-        run: |
-          xvfb-run --server-args="-screen 0 1280x1024x24" node change-language.js
-
-
       - name: Install npm dependencies & Stealth
         run: |
           npm install
@@ -49,6 +40,14 @@ jobs:
           # -vsync cfr fuerza una sincronización constante de cuadros requerida por WebRTC
           ffmpeg -i videos/video1.mp4 -r 30 -vsync cfr -pix_fmt yuv420p video-captura.y4m
           ls -lh video-captura.y4m
+
+
+      - name: Run Roblox automation
+        env:
+          ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
+        run: |
+          xvfb-run --server-args="-screen 0 1280x1024x24" node change-language.js
+
 
       - name: Run Roblox automation
         env:
