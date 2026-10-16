@@ -20,7 +20,7 @@ async function main() {
 
   // Lanzamos Chromium con flags limpios de WebRTC y evasión nativa
   const browser = await chromium.launch({
-    headless: true,
+    headless: false, // CAMBIADO A FALSE
     args: [
       '--use-fake-ui-for-media-stream',
       '--use-fake-device-for-media-stream',
@@ -28,8 +28,7 @@ async function main() {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled',
-      '--disable-gpu',
-      '--use-glnext-for-testing'
+      // '--disable-gpu' <- ELIMINA O COMENTA ESTA LÍNEA
     ],
   });
 
