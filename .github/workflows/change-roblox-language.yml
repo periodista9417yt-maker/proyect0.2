@@ -46,7 +46,15 @@ jobs:
           ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
         run: |
           node change-language.js
+     
+      
+      - name: Run Roblox automation
+        env:
+          ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
+        run: |
+          xvfb-run --server-args="-screen 0 1280x1024x24" node change-language.js
 
+          
       - name: Upload execution artifacts and screenshots
         if: always()
         uses: actions/upload-artifact@v4
