@@ -121,7 +121,7 @@ async function main() {
     // -------------------------------------------------------------------------
     // CÁMARA Y DIÁLOGOS DE PERSONA (DENTRO DE IFRAME)
     // -------------------------------------------------------------------------
-      console.log('➡️ Buscando y haciendo clic en "Continuar con la cámara"...');
+    console.log('➡️ Buscando y haciendo clic en "Continuar con la cámara"...');
     const cameraButton = page.locator('button:has-text("Continuar con la cámara"), [role="button"]:has-text("Continuar con la cámara")').first();
     await cameraButton.waitFor({ state: 'visible', timeout: 15000 });
     await cameraButton.click({ force: true });
@@ -133,9 +133,11 @@ async function main() {
     
     const personaFrame = page.frameLocator('iframe[src*="withpersona.com"], iframe[title*="Persona"]').first();
 
-    await page.waitForTimeout(5000);
+    // -------------------------------------------------------------------------
+    // PRIMER BOTÓN "CONTINUAR" (CON CORRECCIÓN DE REGEX)
+    // -------------------------------------------------------------------------
     console.log('➡️ Buscando el botón azul de "Continuar" dentro de Persona...');
-    const strictPersonaButton = personaFrame.locator('button, [role="button"]').filter({ hasText: /^Continuar\$/ }).first();
+    const strictPersonaButton = personaFrame.getByRole('button', { name: 'Continuar', exact: true }).first();
 
     await strictPersonaButton.waitFor({ state: 'visible', timeout: 20000 });
     
@@ -145,9 +147,13 @@ async function main() {
     await strictPersonaButton.click({ force: true });
     console.log('✅ Botón azul "Continuar" presionado correctamente.');
 
+    // -------------------------------------------------------------------------
+    // SEGUNDO BOTÓN "CONTINUAR"
+    // -------------------------------------------------------------------------
     console.log('➡️ Esperando el siguiente paso y haciendo clic nuevamente en "Continuar"...');
     await page.waitForTimeout(5000);
-    const secondContinueButton = personaFrame.locator('button, [role="button"]').filter({ hasText: /^Continuar\$/ }).first();
+    
+    const secondContinueButton = personaFrame.getByRole('button', { name: 'Continuar', exact: true }).first();
     await secondContinueButton.waitFor({ state: 'visible', timeout: 15000 });
     await secondContinueButton.click({ force: true });
     console.log('✅ Segundo botón "Continuar" presionado.');
