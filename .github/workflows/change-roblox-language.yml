@@ -25,6 +25,8 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+
+
       # Volvemos a generar el archivo .y4m pero optimizado milimétricamente
       - name: Instalar FFmpeg y convertir video MP4 a Y4M de alta fidelidad
         run: |
@@ -47,13 +49,6 @@ jobs:
           ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
         run: |
           xvfb-run --server-args="-screen 0 1280x1024x24" node change-language.js
-
-
-      - name: Run Roblox automation
-        env:
-          ROBLOSECURITY: ${{ secrets.ROBLOSECURITY }}
-        run: |
-          node change-language.js
      
       
 
