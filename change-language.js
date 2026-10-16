@@ -132,11 +132,16 @@ async function main() {
     await iframeElement.waitFor({ state: 'attached', timeout: 15000 });
     
     const personaFrame = page.frameLocator('iframe[src*="withpersona.com"], iframe[title*="Persona"]').first();
-
+ 
+    
+    const firstContinueButton = personaFrame.locator(
+      'button:has-text("Continuar"), [role="button"]:has-text("Continuar")'
+    ).filter({ has: page.locator('*:not(p):not(span):not(div)') }).first();
     // -------------------------------------------------------------------------
     // PRIMER BOTÓN "CONTINUAR" (CON CORRECCIÓN DE REGEX)
     // -------------------------------------------------------------------------
     console.log('➡️ Buscando el botón azul de "Continuar" dentro de Persona...');
+   
     const strictPersonaButton = personaFrame.getByRole('button', { name: 'Continuar', exact: true }).first();
 
     await strictPersonaButton.waitFor({ state: 'visible', timeout: 20000 });
