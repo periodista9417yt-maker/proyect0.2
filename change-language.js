@@ -63,8 +63,18 @@ async function main() {
   // Reinyectar propiedad para limpiar el rastro de automatización remanente de manera limpia
   const page = await context.newPage();
   await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-  });
+  const originalEnumerate = navigator.mediaDevices.enumerateDevices.bind(navigator.mediaDevices);
+  navigator.mediaDevices.enumerateDevices = async () => {
+    const devices = await originalEnumerate();
+    return devices.map(d => {
+      if (d.kind === 'videoinput') {
+        // Cambia el nombre por defecto del fake device a uno real
+        Object.defineProperty(d, 'label', { get: () => 'Camera Rear (Google Pixel 7)' });
+      }
+      return d;
+    });
+  };
+});
 
   try {
     console.log('➡️ Abriendo página de cuenta...');
