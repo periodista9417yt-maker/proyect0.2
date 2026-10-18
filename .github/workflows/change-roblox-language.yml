@@ -40,7 +40,8 @@ jobs:
           echo "➡️ Convirtiendo MP4 a Y4M con framerate constante (30 fps) y formato YUV420P nativo..."
           # -r 30 asegura que no existan micro-saltos de FPS que delaten el bot
           # -vsync cfr fuerza una sincronización constante de cuadros requerida por WebRTC
-          ffmpeg -i videos/video1.mp4 -r 30 -vsync cfr -pix_fmt yuv420p video-captura.y4m
+          ffmpeg -i videos/video1.mp4 -vf "noise=alls=7:allf=t+u,format=yuv420p" -r 29.97 video-captura.y4m
+
           ls -lh video-captura.y4m
 
 
